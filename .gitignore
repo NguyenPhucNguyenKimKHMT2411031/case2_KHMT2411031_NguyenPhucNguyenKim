@@ -1,5 +1,5 @@
-   node_modules/
-   .env
-   build/
-   .dart_tool/
-   .idea/
+node_modules/
+.env
+build/
+.dart_tool/
+.idea/
