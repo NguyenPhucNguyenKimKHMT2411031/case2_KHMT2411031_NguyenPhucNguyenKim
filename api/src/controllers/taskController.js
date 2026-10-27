@@ -34,3 +34,28 @@ exports.getTasks = async (req, res, next) => {
     next(e);
   }
 };
+
+exports.getTaskById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(404).json({ message: 'Không tìm thấy công việc' });
+    }
+    const task = await Task.findById(id).populate(POPULATE);
+    if (!task) return res.status(404).json({ message: 'Không tìm thấy công việc' });
+
+    const uid = String(req.user._id);
+    const isOwner = String(task.createdBy._id) === uid;
+    const isAssignee = task.assigneeIds.some((u) => String(u._id) === uid);
+    const share = await TaskShare.findOne({ taskId: task._id, userId: req.user._id });
+
+    if (!isOwner && !isAssignee && !share) {
+      return res.status(403).json({ message: 'Bạn không có quyền truy cập công việc này' });
+    }
+
+    const myRole = isOwner ? 'owner' : isAssignee ? 'assignee' : share.permission;
+    res.status(200).json({ ...task.toObject(), myRole });
+  } catch (e) {
+    next(e);
+  }
+};
