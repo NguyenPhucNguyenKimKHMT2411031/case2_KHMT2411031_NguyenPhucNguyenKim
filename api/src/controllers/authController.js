@@ -40,3 +40,9 @@ exports.login = async (req, res, next) => {
     next(e);
   }
 };
+
+
+exports.getMe = (req, res) => {
+  const u = req.user;
+  res.json({ id: u._id, fullName: u.fullName, email: u.email, avatarUrl: u.avatarUrl });
+};
