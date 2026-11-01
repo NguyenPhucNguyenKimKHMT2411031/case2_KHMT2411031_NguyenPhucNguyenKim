@@ -10,8 +10,9 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
-// Đăng ký Route Giao việc (Chức năng 2)
+// Nested Routes cho Giao việc và Chia sẻ
 app.use('/api/tasks/:id/assignees', require('./routes/assignmentRoutes'));
+app.use('/api/tasks/:id/shares', require('./routes/taskShareRoutes'));
 
 app.use((err, req, res, next) => {
   console.error(err);
