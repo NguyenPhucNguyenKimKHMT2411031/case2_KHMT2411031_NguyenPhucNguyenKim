@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
+  // ==========================================
   // --- Chức năng 1: Quản lý Token & Headers ---
+  // ==========================================
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -33,7 +35,9 @@ class ApiService {
     return headers;
   }
 
-  // --- Chức năng 2: Đăng nhập ---
+  // ==========================================
+  // --- Chức năng 2: Đăng nhập (Login) ---
+  // ==========================================
   static Future<dynamic> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -53,7 +57,9 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 3: Đăng ký ---
+  // ==========================================
+  // --- Chức năng 3: Đăng ký (Register) ---
+  // ==========================================
   static Future<dynamic> register(String fullName, String email, String password) async {
     try {
       final response = await http.post(
@@ -73,6 +79,25 @@ class ApiService {
         'success': false,
         'message': data['message'] ?? data['error'] ?? 'Đăng ký thất bại'
       };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // ==========================================
+  // --- Chức năng 4: Lấy danh sách công việc (GET Tasks) ---
+  // ==========================================
+  static Future<dynamic> getTasks() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/tasks'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Không thể lấy danh sách công việc'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
