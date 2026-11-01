@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
+  // --- Chức năng 1: Quản lý Token & Headers ---
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -28,5 +31,25 @@ class ApiService {
       headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+
+  // --- Chức năng 2: Đăng nhập ---
+  static Future<dynamic> login(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      final data = jsonDecode(response.body);
+      String? token = data['token'] ?? data['accessToken'] ?? data['data']?['token'];
+      if ((response.statusCode == 200 || response.statusCode == 201) && token != null) {
+        await saveToken(token);
+        return {'success': true, 'data': data};
+      }
+      return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
   }
 }
