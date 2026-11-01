@@ -1,4 +1,5 @@
-import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -21,9 +22,7 @@ class ApiService {
 
   static Future<dynamic> getHeaders() async {
     final token = await getToken();
-    Map<String, String> headers = {
-      'Content-Type': 'application/json',
-    };
+    Map<String, String> headers = {'Content-Type': 'application/json'};
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
