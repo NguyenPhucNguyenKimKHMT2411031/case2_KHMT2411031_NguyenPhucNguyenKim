@@ -8,6 +8,7 @@ app.use(express.json());
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes')); // Route mới cho Chức năng 3
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
 // Nested Routes cho Giao việc và Chia sẻ
