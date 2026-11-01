@@ -61,3 +61,24 @@ exports.updateMe = async (req, res) => {
     res.status(500).json({ message: 'Lỗi cập nhật thông tin', error: err.message });
   }
 };
+// PUT /api/auth/change-password - Đổi mật khẩu (Chức năng 2 - Phần A)
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+
+    // Kiểm tra mật khẩu hiện tại
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Mật khẩu hiện tại không đúng' });
+    }
+
+    // Băm và cập nhật mật khẩu mới
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: 'Đổi mật khẩu thành công' });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi đổi mật khẩu', error: err.message });
+  }
+};
