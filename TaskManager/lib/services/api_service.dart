@@ -52,4 +52,29 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+  // --- Chức năng 3: Đăng ký ---
+  static Future<dynamic> register(String fullName, String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'fullName': fullName,
+          'email': email,
+          'password': password,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {'success': true, 'data': data};
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? data['error'] ?? 'Đăng ký thất bại'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
