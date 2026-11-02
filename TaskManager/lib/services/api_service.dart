@@ -6,9 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
-  // ==========================================
+
+
   // --- Chức năng 1: Quản lý Token & Headers ---
-  // ==========================================
+ 
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -35,9 +36,10 @@ class ApiService {
     return headers;
   }
 
-  // ==========================================
+
+  
   // --- Chức năng 2: Đăng nhập ---
-  // ==========================================
+  
   static Future<dynamic> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -57,9 +59,8 @@ class ApiService {
     }
   }
 
-  // ==========================================
   // --- Chức năng 3: Đăng ký ---
-  // ==========================================
+
   static Future<dynamic> register(String fullName, String email, String password) async {
     try {
       final response = await http.post(
@@ -84,9 +85,9 @@ class ApiService {
     }
   }
 
-  // ==========================================
+
   // --- Chức năng 4: Lấy danh sách công việc (Buổi 2) ---
-  // ==========================================
+
   static Future<dynamic> getTasks() async {
     try {
       final headers = await getHeaders();
@@ -103,9 +104,8 @@ class ApiService {
     }
   }
 
-  // ==========================================
   // --- Chức năng 5: Tạo công việc mới (Buổi 2) ---
-  // ==========================================
+ 
   static Future<dynamic> createTask(Map<String, dynamic> taskData) async {
     try {
       final headers = await getHeaders();
@@ -123,9 +123,7 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // --- Chức năng 6: Cập nhật công việc (Buổi 2) ---
-  // ==========================================
+
   static Future<dynamic> updateTask(String id, Map<String, dynamic> taskData) async {
     try {
       final headers = await getHeaders();
@@ -143,9 +141,8 @@ class ApiService {
     }
   }
 
-  // ==========================================
   // --- Chức năng 7: Xóa công việc (Buổi 2) ---
-  // ==========================================
+ 
   static Future<dynamic> deleteTask(String id) async {
     try {
       final headers = await getHeaders();
@@ -161,4 +158,5 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
 }
