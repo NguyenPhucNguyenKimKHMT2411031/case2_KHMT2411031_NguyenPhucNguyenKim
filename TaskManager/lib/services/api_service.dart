@@ -182,4 +182,22 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng C1.3: Cập nhật người phụ trách chính ---
+  static Future<dynamic> updatePrimaryAssignee(String taskId,
+      String userId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/tasks/$taskId/assignees/$userId'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật người phụ trách thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
