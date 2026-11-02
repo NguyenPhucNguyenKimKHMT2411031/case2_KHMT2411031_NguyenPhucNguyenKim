@@ -167,13 +167,31 @@ class ApiService {
       if (priority != null) queryParams['priority'] = priority;
       if (sortBy != null) queryParams['sortBy'] = sortBy;
 
-      final uri = Uri.parse('$baseUrl/tasks').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/tasks').replace(
+          queryParameters: queryParams);
       final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Không thể lấy danh sách công việc'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+// --- Chức năng 2/B: Xem chi tiết 1 công việc ---
+  static Future<dynamic> getTaskById(String id) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/tasks/$id'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Không tìm thấy chi tiết công việc'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
