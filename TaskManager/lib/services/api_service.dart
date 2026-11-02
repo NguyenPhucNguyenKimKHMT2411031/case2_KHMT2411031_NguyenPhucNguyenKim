@@ -6,9 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
-  // ==========================================
+
+
   // --- Chức năng 1: Quản lý Token & Headers ---
-  // ==========================================
+ 
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -35,9 +36,10 @@ class ApiService {
     return headers;
   }
 
-  // ==========================================
-  // --- Chức năng 2: Đăng nhập (Login) ---
-  // ==========================================
+
+  
+  // --- Chức năng 2: Đăng nhập ---
+  
   static Future<dynamic> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -57,9 +59,8 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // --- Chức năng 3: Đăng ký (Register) ---
-  // ==========================================
+  // --- Chức năng 3: Đăng ký ---
+
   static Future<dynamic> register(String fullName, String email, String password) async {
     try {
       final response = await http.post(
@@ -84,11 +85,11 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // --- Chức năng 8: Xem thông tin cá nhân (Profile) ---
-  // ==========================================
+
+  // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
+  
   static Future<dynamic> getProfile() async {
-    try {
+try {
       final headers = await getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/users/profile'),
