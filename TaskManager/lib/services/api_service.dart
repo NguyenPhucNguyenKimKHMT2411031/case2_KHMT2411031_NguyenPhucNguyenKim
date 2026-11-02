@@ -217,4 +217,26 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng C2.1: Chia sẻ công việc với người dùng khác ---
+  static Future<dynamic> shareTask(String taskId, String email,
+      String role) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/tasks/$taskId/shares'),
+        headers: headers,
+        body: jsonEncode({
+          'email': email,
+          'role': role, // 'viewer' hoặc 'editor'
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Chia sẻ công việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
