@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
-
+  //--PHẦN A:QUẢN LÝ TÀI KHOẢN VÀ XÁC 
   // --- Chức năng 1: Quản lý Token & Headers ---
 
   static Future<void> saveToken(String token) async {
