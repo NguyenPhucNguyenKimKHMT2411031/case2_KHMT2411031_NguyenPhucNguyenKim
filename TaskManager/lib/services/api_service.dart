@@ -7,9 +7,9 @@ class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
 
-
   // --- Chức năng 1: Quản lý Token & Headers ---
- 
+
+
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -37,9 +37,8 @@ class ApiService {
   }
 
 
-  
   // --- Chức năng 2: Đăng nhập ---
-  
+
   static Future<dynamic> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -48,12 +47,17 @@ class ApiService {
         body: jsonEncode({'email': email, 'password': password}),
       );
       final data = jsonDecode(response.body);
-      String? token = data['token'] ?? data['accessToken'] ?? data['data']?['token'];
-      if ((response.statusCode == 200 || response.statusCode == 201) && token != null) {
+      String? token = data['token'] ?? data['accessToken'] ??
+          data['data']?['token'];
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          token != null) {
         await saveToken(token);
         return {'success': true, 'data': data};
       }
-      return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Đăng nhập thất bại'
+      };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
@@ -61,7 +65,11 @@ class ApiService {
 
   // --- Chức năng 3: Đăng ký ---
 
+  static Future<dynamic> register(String fullName, String email,
+      String password) async {
+
   static Future<dynamic> register(String fullName, String email, String password) async {
+
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -87,7 +95,7 @@ class ApiService {
 
 
   // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
-  
+
   static Future<dynamic> getProfile() async {
 try {
       final headers = await getHeaders();
@@ -99,6 +107,24 @@ try {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Không lấy được thông tin cá nhân'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+// --- Chức năng 5: Cập nhật thông tin cá nhân ---
+  static Future<dynamic> updateProfile(Map<String, dynamic> userData) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/profile'),
+        headers: headers,
+        body: jsonEncode(userData),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật thông tin thất bại'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
