@@ -10,7 +10,6 @@ class ApiService {
   // --- PHẦN A: QUẢN LÝ TÀI KHOẢN VÀ XÁC THỰC ---
   // ==========================================
 
-  // --- Chức năng 1: Quản lý Token & Headers ---
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -37,7 +36,6 @@ class ApiService {
     return headers;
   }
 
-  // --- Chức năng 2: Đăng nhập ---
   static Future<dynamic> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -60,13 +58,7 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 3: Đăng ký ---
-<<<<<<< HEAD
-  static Future<dynamic> register(String fullName, String email,
-      String password) async {
-=======
   static Future<dynamic> register(String fullName, String email, String password) async {
->>>>>>> d7f12198098471068ea75f5c197809dffe15ac00
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -90,7 +82,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
   static Future<dynamic> getProfile() async {
     try {
       final headers = await getHeaders();
@@ -107,7 +98,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 5: Cập nhật thông tin cá nhân ---
   static Future<dynamic> updateProfile(Map<String, dynamic> userData) async {
     try {
       final headers = await getHeaders();
@@ -125,7 +115,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 6: Đổi mật khẩu ---
   static Future<dynamic> changePassword(String oldPassword, String newPassword) async {
     try {
       final headers = await getHeaders();
@@ -150,7 +139,6 @@ class ApiService {
   // --- PHẦN B: QUẢN LÝ CÔNG VIỆC (TASKS) ---
   // ==========================================
 
-  // --- Chức năng 1/B: Lấy danh sách công việc (Hỗ trợ Lọc & Tìm kiếm) ---
   static Future<dynamic> getTasks({
     String? type,
     String? search,
@@ -179,7 +167,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 2/B: Xem chi tiết 1 công việc ---
   static Future<dynamic> getTaskById(String id) async {
     try {
       final headers = await getHeaders();
@@ -196,7 +183,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng 3/B: Tạo công việc mới ---
   static Future<dynamic> createTask(Map<String, dynamic> taskData) async {
     try {
       final headers = await getHeaders();
@@ -214,16 +200,7 @@ class ApiService {
     }
   }
 
-<<<<<<< HEAD
-  // ==========================================
-  // --- Chức năng 6: Cập nhật công việc (Buổi 2) ---
-  // ==========================================
-  static Future<dynamic> updateTask(String id,
-      Map<String, dynamic> taskData) async {
-=======
-  // --- Chức năng 4/B: Cập nhật công việc ---
   static Future<dynamic> updateTask(String id, Map<String, dynamic> taskData) async {
->>>>>>> d7f12198098471068ea75f5c197809dffe15ac00
     try {
       final headers = await getHeaders();
       final response = await http.put(
@@ -240,25 +217,6 @@ class ApiService {
     }
   }
 
-<<<<<<< HEAD
-// PHẦN C: GIAO VIỆC VÀ CHIA SẺ
-// --- Chức năng C1.1: Xem danh sách người được giao ---
-  static Future<dynamic> getAssignees(String taskId) async {
-    try {
-      final headers = await getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/tasks/$taskId/assignees'),
-        headers: headers,
-      );
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
-      }
-      return {
-        'success': false,
-        'message': 'Không lấy được danh sách giao việc'
-      };
-=======
-  // --- Chức năng 5/B: Xóa công việc ---
   static Future<dynamic> deleteTask(String id) async {
     try {
       final headers = await getHeaders();
@@ -270,18 +228,11 @@ class ApiService {
         return {'success': true, 'message': 'Xóa công việc thành công'};
       }
       return {'success': false, 'message': 'Xóa công việc thất bại'};
->>>>>>> d7f12198098471068ea75f5c197809dffe15ac00
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
 
-<<<<<<< HEAD
-// --- Chức năng C1.2: Giao việc cho một hoặc nhiều người ---
-  static Future<dynamic> assignTask(String taskId, List<String> assigneeIds,
-      String? primaryAssigneeId) async {
-=======
-  // --- Chức năng 6/B: Cập nhật nhanh trạng thái công việc ---
   static Future<dynamic> updateTaskStatus(String id, String status) async {
     try {
       final headers = await getHeaders();
@@ -303,7 +254,6 @@ class ApiService {
   // --- PHẦN C: GIAO VIỆC VÀ CHIA SẺ ---
   // ==========================================
 
-  // --- Chức năng C1.1: Xem danh sách người được giao ---
   static Future<dynamic> getAssignees(String taskId) async {
     try {
       final headers = await getHeaders();
@@ -320,9 +270,7 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C1.2: Giao việc cho một hoặc nhiều người ---
   static Future<dynamic> assignTask(String taskId, List<String> assigneeIds, String? primaryAssigneeId) async {
->>>>>>> d7f12198098471068ea75f5c197809dffe15ac00
     try {
       final headers = await getHeaders();
       final response = await http.post(
@@ -342,7 +290,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C1.3: Cập nhật người phụ trách chính ---
   static Future<dynamic> updatePrimaryAssignee(String taskId, String userId) async {
     try {
       final headers = await getHeaders();
@@ -359,7 +306,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C1.4: Hủy giao việc cho một người ---
   static Future<dynamic> removeAssignee(String taskId, String userId) async {
     try {
       final headers = await getHeaders();
@@ -376,7 +322,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C2.1: Chia sẻ công việc với người dùng khác ---
   static Future<dynamic> shareTask(String taskId, String email, String role) async {
     try {
       final headers = await getHeaders();
@@ -397,7 +342,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C2.2: Xem danh sách người được chia sẻ ---
   static Future<dynamic> getTaskShares(String taskId) async {
     try {
       final headers = await getHeaders();
@@ -414,7 +358,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C2.3: Cập nhật quyền truy cập ---
   static Future<dynamic> updateSharePermission(String taskId, String shareId, String role) async {
     try {
       final headers = await getHeaders();
@@ -434,7 +377,6 @@ class ApiService {
     }
   }
 
-  // --- Chức năng C2.4: Hủy chia sẻ công việc ---
   static Future<dynamic> revokeShare(String taskId, String shareId) async {
     try {
       final headers = await getHeaders();
@@ -446,6 +388,63 @@ class ApiService {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Hủy chia sẻ thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // ==========================================
+  // --- PHẦN D: THÔNG BÁO (NOTIFICATIONS) ---
+  // ==========================================
+
+  // --- Chức năng D1.1: Lấy danh sách thông báo ---
+  static Future<dynamic> getNotifications({bool? unreadOnly}) async {
+    try {
+      final headers = await getHeaders();
+      Map<String, String> queryParams = {};
+      if (unreadOnly != null) queryParams['unreadOnly'] = unreadOnly.toString();
+
+      final uri = Uri.parse('$baseUrl/notifications').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Không lấy được danh sách thông báo'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // --- Chức năng D1.2: Đánh dấu một thông báo là đã đọc ---
+  static Future<dynamic> markAsRead(String notificationId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/notifications/$notificationId/read'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật trạng thái thông báo thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // --- Chức năng D1.3: Đánh dấu tất cả thông báo là đã đọc ---
+  static Future<dynamic> markAllAsRead() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/notifications/read-all'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật trạng thái tất cả thông báo thất bại'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
