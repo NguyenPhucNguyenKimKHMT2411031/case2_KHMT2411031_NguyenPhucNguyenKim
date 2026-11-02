@@ -86,77 +86,21 @@ class ApiService {
   }
 
 
-  // --- Chức năng 4: Lấy danh sách công việc (Buổi 2) ---
-
-  static Future<dynamic> getTasks() async {
-    try {
+  // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
+  
+  static Future<dynamic> getProfile() async {
+try {
       final headers = await getHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/tasks'),
+        Uri.parse('$baseUrl/users/profile'),
         headers: headers,
       );
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
-      return {'success': false, 'message': 'Không thể lấy danh sách công việc'};
+      return {'success': false, 'message': 'Không lấy được thông tin cá nhân'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
-
-  // --- Chức năng 5: Tạo công việc mới (Buổi 2) ---
- 
-  static Future<dynamic> createTask(Map<String, dynamic> taskData) async {
-    try {
-      final headers = await getHeaders();
-      final response = await http.post(
-        Uri.parse('$baseUrl/tasks'),
-        headers: headers,
-        body: jsonEncode(taskData),
-      );
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
-      }
-      return {'success': false, 'message': 'Tạo công việc thất bại'};
-    } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
-    }
-  }
-
-
-  static Future<dynamic> updateTask(String id, Map<String, dynamic> taskData) async {
-    try {
-      final headers = await getHeaders();
-      final response = await http.put(
-        Uri.parse('$baseUrl/tasks/$id'),
-        headers: headers,
-        body: jsonEncode(taskData),
-      );
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
-      }
-      return {'success': false, 'message': 'Cập nhật công việc thất bại'};
-    } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
-    }
-  }
-
-  // --- Chức năng 7: Xóa công việc (Buổi 2) ---
- 
-  static Future<dynamic> deleteTask(String id) async {
-    try {
-      final headers = await getHeaders();
-      final response = await http.delete(
-        Uri.parse('$baseUrl/tasks/$id'),
-        headers: headers,
-      );
-      if (response.statusCode == 200) {
-        return {'success': true, 'message': 'Xóa công việc thành công'};
-      }
-      return {'success': false, 'message': 'Xóa công việc thất bại'};
-    } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
-    }
-  }
-
 }
