@@ -233,4 +233,21 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng 5/B: Xóa công việc ---
+  static Future<dynamic> deleteTask(String id) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/tasks/$id'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Xóa công việc thành công'};
+      }
+      return {'success': false, 'message': 'Xóa công việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
