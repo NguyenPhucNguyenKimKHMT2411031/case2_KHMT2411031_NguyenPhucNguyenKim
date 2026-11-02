@@ -85,7 +85,7 @@ class ApiService {
   }
 
   // ==========================================
-  // --- Chức năng 4: Lấy danh sách công việc (Buổi 2) ---
+  // --- Chức năng 4: Lấy danh sách công việc ---
   // ==========================================
   static Future<dynamic> getTasks() async {
     try {
@@ -104,7 +104,7 @@ class ApiService {
   }
 
   // ==========================================
-  // --- Chức năng 5: Tạo công việc mới (Buổi 2) ---
+  // --- Chức năng 5: Tạo công việc mới ---
   // ==========================================
   static Future<dynamic> createTask(Map<String, dynamic> taskData) async {
     try {
@@ -124,7 +124,7 @@ class ApiService {
   }
 
   // ==========================================
-  // --- Chức năng 6: Cập nhật công việc (Buổi 2) ---
+  // --- Chức năng 6: Cập nhật công việc ---
   // ==========================================
   static Future<dynamic> updateTask(String id, Map<String, dynamic> taskData) async {
     try {
@@ -144,7 +144,7 @@ class ApiService {
   }
 
   // ==========================================
-  // --- Chức năng 7: Xóa công việc (Buổi 2) ---
+  // --- Chức năng 7: Xóa công việc ---
   // ==========================================
   static Future<dynamic> deleteTask(String id) async {
     try {
@@ -157,6 +157,25 @@ class ApiService {
         return {'success': true, 'message': 'Xóa công việc thành công'};
       }
       return {'success': false, 'message': 'Xóa công việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  // ==========================================
+  // --- Chức năng 8: Xem thông tin cá nhân ---
+  // ==========================================
+  static Future<dynamic> getProfile() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/profile'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Không lấy được thông tin cá nhân'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
