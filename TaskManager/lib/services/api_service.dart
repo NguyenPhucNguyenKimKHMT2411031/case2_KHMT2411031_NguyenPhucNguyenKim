@@ -139,6 +139,7 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
 // PHẦN C: GIAO VIỆC VÀ CHIA SẺ
 // --- Chức năng C1.1: Xem danh sách người được giao ---
   static Future<dynamic> getAssignees(String taskId) async {
@@ -155,6 +156,28 @@ class ApiService {
         'success': false,
         'message': 'Không lấy được danh sách giao việc'
       };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+// --- Chức năng C1.2: Giao việc cho một hoặc nhiều người ---
+  static Future<dynamic> assignTask(String taskId, List<String> assigneeIds,
+      String? primaryAssigneeId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/tasks/$taskId/assignees'),
+        headers: headers,
+        body: jsonEncode({
+          'assigneeIds': assigneeIds,
+          'primaryAssigneeId': primaryAssigneeId,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Giao công việc thất bại'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
