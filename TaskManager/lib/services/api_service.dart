@@ -85,19 +85,19 @@ class ApiService {
   }
 
   // ==========================================
-  // --- Chức năng 4: Lấy danh sách công việc (GET Tasks) ---
+  // --- Chức năng 8: Xem thông tin cá nhân (Profile) ---
   // ==========================================
-  static Future<dynamic> getTasks() async {
+  static Future<dynamic> getProfile() async {
     try {
       final headers = await getHeaders();
       final response = await http.get(
-        Uri.parse('$baseUrl/tasks'),
+        Uri.parse('$baseUrl/users/profile'),
         headers: headers,
       );
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
-      return {'success': false, 'message': 'Không thể lấy danh sách công việc'};
+      return {'success': false, 'message': 'Không lấy được thông tin cá nhân'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
