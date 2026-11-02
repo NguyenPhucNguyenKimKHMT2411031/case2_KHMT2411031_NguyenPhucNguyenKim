@@ -256,4 +256,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng C2.3: Cập nhật quyền truy cập ---
+  static Future<dynamic> updateSharePermission(String taskId, String shareId,
+      String role) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/tasks/$taskId/shares/$shareId'),
+        headers: headers,
+        body: jsonEncode({
+          'role': role, // 'viewer' hoặc 'editor'
+        }),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật quyền thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
