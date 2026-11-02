@@ -9,6 +9,7 @@ class ApiService {
 
   // --- Chức năng 1: Quản lý Token & Headers ---
 
+
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -66,6 +67,9 @@ class ApiService {
 
   static Future<dynamic> register(String fullName, String email,
       String password) async {
+
+  static Future<dynamic> register(String fullName, String email, String password) async {
+
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -93,7 +97,7 @@ class ApiService {
   // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
 
   static Future<dynamic> getProfile() async {
-    try {
+try {
       final headers = await getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/users/profile'),
