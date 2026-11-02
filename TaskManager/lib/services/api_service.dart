@@ -5,10 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:3000/api';
-
-
+  //--PHẦN A:QUẢN LÝ TÀI KHOẢN VÀ XÁC 
   // --- Chức năng 1: Quản lý Token & Headers ---
-
 
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,7 +33,6 @@ class ApiService {
     }
     return headers;
   }
-
 
   // --- Chức năng 2: Đăng nhập ---
 
@@ -67,9 +64,6 @@ class ApiService {
 
   static Future<dynamic> register(String fullName, String email,
       String password) async {
-
-  static Future<dynamic> register(String fullName, String email, String password) async {
-
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -93,11 +87,10 @@ class ApiService {
     }
   }
 
-
   // --- Chức năng 4: Xem thông tin cá nhân (Profile) ---
 
   static Future<dynamic> getProfile() async {
-try {
+    try {
       final headers = await getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/users/profile'),
@@ -112,7 +105,8 @@ try {
     }
   }
 
-// --- Chức năng 5: Cập nhật thông tin cá nhân ---
+  // --- Chức năng 5: Cập nhật thông tin cá nhân ---
+
   static Future<dynamic> updateProfile(Map<String, dynamic> userData) async {
     try {
       final headers = await getHeaders();
@@ -130,7 +124,8 @@ try {
     }
   }
 
-// --- Chức năng 10: Đổi mật khẩu ---
+  // --- Chức năng 6: Đổi mật khẩu ---
+
   static Future<dynamic> changePassword(String oldPassword,
       String newPassword) async {
     try {
@@ -147,6 +142,38 @@ try {
         return {'success': true, 'message': 'Đổi mật khẩu thành công'};
       }
       return {'success': false, 'message': 'Đổi mật khẩu thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+
+  // --- PHẦN B: QUẢN LÝ CÔNG VIỆC (TASKS) ---
+
+  // --- Chức năng 1/B: Lấy danh sách công việc (Hỗ trợ Lọc & Tìm kiếm) ---
+  static Future<dynamic> getTasks({
+    String? type,
+    String? search,
+    String? status,
+    String? priority,
+    String? sortBy,
+  }) async {
+    try {
+      final headers = await getHeaders();
+      Map<String, String> queryParams = {};
+      if (type != null) queryParams['type'] = type;
+      if (search != null) queryParams['search'] = search;
+      if (status != null) queryParams['status'] = status;
+      if (priority != null) queryParams['priority'] = priority;
+      if (sortBy != null) queryParams['sortBy'] = sortBy;
+
+      final uri = Uri.parse('$baseUrl/tasks').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Không thể lấy danh sách công việc'};
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
