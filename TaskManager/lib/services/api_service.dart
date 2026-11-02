@@ -214,4 +214,23 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng 4/B: Cập nhật công việc ---
+  static Future<dynamic> updateTask(String id,
+      Map<String, dynamic> taskData) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/tasks/$id'),
+        headers: headers,
+        body: jsonEncode(taskData),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật công việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
