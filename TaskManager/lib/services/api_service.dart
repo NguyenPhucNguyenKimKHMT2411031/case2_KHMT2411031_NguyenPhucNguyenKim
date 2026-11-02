@@ -200,4 +200,21 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng C1.4: Hủy giao việc cho một người ---
+  static Future<dynamic> removeAssignee(String taskId, String userId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/tasks/$taskId/assignees/$userId'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Hủy giao việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }

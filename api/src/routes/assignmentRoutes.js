@@ -10,5 +10,6 @@ router.get('/', authMiddleware, assignmentController.getAssignees);
 router.post('/', authMiddleware, assignmentController.assignTask);
 // PATCH /api/tasks/:id/assignees/:userId - Cập nhật người phụ trách chính
 router.patch('/:userId', authMiddleware, assignmentController.updatePrimaryAssignee);
-
+// DELETE /api/tasks/:id/assignees/:userId - Hủy giao việc cho một người
+router.delete('/:userId', authMiddleware, assignmentController.removeAssignee);
 module.exports = router;
