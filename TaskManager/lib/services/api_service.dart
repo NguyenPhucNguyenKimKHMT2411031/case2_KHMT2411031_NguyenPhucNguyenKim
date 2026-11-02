@@ -42,19 +42,25 @@ class ApiService {
         body: jsonEncode({'email': email, 'password': password}),
       );
       final data = jsonDecode(response.body);
-      String? token = data['token'] ?? data['accessToken'] ?? data['data']?['token'];
-      if ((response.statusCode == 200 || response.statusCode == 201) && token != null) {
+      String? token = data['token'] ?? data['accessToken'] ??
+          data['data']?['token'];
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          token != null) {
         await saveToken(token);
         return {'success': true, 'data': data};
       }
-      return {'success': false, 'message': data['message'] ?? 'Đăng nhập thất bại'};
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Đăng nhập thất bại'
+      };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
 
   // --- Chức năng 3: Đăng ký ---
-  static Future<dynamic> register(String fullName, String email, String password) async {
+  static Future<dynamic> register(String fullName, String email,
+      String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/register'),
@@ -116,7 +122,8 @@ class ApiService {
   // ==========================================
   // --- Chức năng 6: Cập nhật công việc (Buổi 2) ---
   // ==========================================
-  static Future<dynamic> updateTask(String id, Map<String, dynamic> taskData) async {
+  static Future<dynamic> updateTask(String id,
+      Map<String, dynamic> taskData) async {
     try {
       final headers = await getHeaders();
       final response = await http.put(
@@ -128,6 +135,26 @@ class ApiService {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Cập nhật công việc thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+// PHẦN C: GIAO VIỆC VÀ CHIA SẺ
+// --- Chức năng C1.1: Xem danh sách người được giao ---
+  static Future<dynamic> getAssignees(String taskId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/tasks/$taskId/assignees'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {
+        'success': false,
+        'message': 'Không lấy được danh sách giao việc'
+      };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
