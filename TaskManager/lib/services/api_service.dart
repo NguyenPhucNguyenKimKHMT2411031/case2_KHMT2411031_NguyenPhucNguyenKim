@@ -250,4 +250,22 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng 6/B: Cập nhật nhanh trạng thái công việc ---
+  static Future<dynamic> updateTaskStatus(String id, String status) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/tasks/$id/status'),
+        headers: headers,
+        body: jsonEncode({'status': status}),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Cập nhật trạng thái thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
