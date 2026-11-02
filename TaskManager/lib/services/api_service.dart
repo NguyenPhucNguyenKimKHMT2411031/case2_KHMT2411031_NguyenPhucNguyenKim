@@ -126,7 +126,7 @@ class ApiService {
     }
   }
 
-// --- Chức năng 10: Đổi mật khẩu ---
+// --- Chức năng 6: Đổi mật khẩu ---
   static Future<dynamic> changePassword(String oldPassword,
       String newPassword) async {
     try {
