@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const authMiddleware = require('../middleware/authMiddleware');
-const { checkTaskPermission } = require('../middleware/permissionMiddleware');
 const assignmentController = require('../controllers/assignmentController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-router.use(authMiddleware);
+// GET /api/tasks/:id/assignees - Xem danh sách người được giao
+router.get('/', authMiddleware, assignmentController.getAssignees);
 
-router.get('/', checkTaskPermission('viewer'), assignmentController.getAssignees);
-router.post('/', checkTaskPermission('owner'), assignmentController.assignTask);
-router.patch('/:userId', checkTaskPermission('owner'), assignmentController.updatePrimaryAssignee);
-router.delete('/:userId', checkTaskPermission('owner'), assignmentController.removeAssignee);
-
+// POST /api/tasks/:id/assignees - Giao việc cho 1 hoặc nhiều người
+router.post('/', authMiddleware, assignmentController.assignTask);
+// PATCH /api/tasks/:id/assignees/:userId - Cập nhật người phụ trách chính
+router.patch('/:userId', authMiddleware, assignmentController.updatePrimaryAssignee);
+// DELETE /api/tasks/:id/assignees/:userId - Hủy giao việc cho một người
+router.delete('/:userId', authMiddleware, assignmentController.removeAssignee);
 module.exports = router;
