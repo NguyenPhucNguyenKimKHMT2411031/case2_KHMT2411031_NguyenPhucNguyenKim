@@ -129,4 +129,26 @@ try {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// --- Chức năng 10: Đổi mật khẩu ---
+  static Future<dynamic> changePassword(String oldPassword,
+      String newPassword) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/change-password'),
+        headers: headers,
+        body: jsonEncode({
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Đổi mật khẩu thành công'};
+      }
+      return {'success': false, 'message': 'Đổi mật khẩu thất bại'};
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
