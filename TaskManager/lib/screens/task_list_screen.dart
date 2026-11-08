@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../services/api_service.dart';
+import '../widgets/task_history_dialog.dart'; // [E3] Import Dialog Lịch sử
 import 'auth/login_screen.dart';
 
 class TaskListScreen extends StatefulWidget {
@@ -146,7 +147,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   if (dialogCtx.mounted) {
                     if (res['success'] == true) {
                       Navigator.pop(dialogCtx);
-                      _fetchUnreadCount(); // Cập nhật lại số lượng chưa đọc sau khi đọc tất cả
+                      _fetchUnreadCount();
                       _showNotificationsDialog();
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -206,7 +207,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           await ApiService.markAsRead(item['_id'].toString());
                           if (dialogCtx.mounted) {
                             Navigator.pop(dialogCtx);
-                            _fetchUnreadCount(); // Làm mới số đếm chưa đọc
+                            _fetchUnreadCount();
                             _showNotificationsDialog();
                           }
                         }
@@ -501,6 +502,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icon Lịch sử hoạt động (Module E3)
+                IconButton(
+                  icon: const Icon(Icons.history, color: Colors.purple),
+                  tooltip: 'Xem lịch sử hoạt động',
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => TaskHistoryDialog(
+                        taskId: task.id,
+                        taskTitle: task.title,
+                      ),
+                    );
+                  },
+                ),
                 // Icon Phân công (Module C)
                 IconButton(
                   icon: const Icon(Icons.person_add, color: Colors.green),
