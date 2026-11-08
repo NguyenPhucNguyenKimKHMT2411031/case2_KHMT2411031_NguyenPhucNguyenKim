@@ -14,11 +14,34 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> {
   List<Task> _tasks = [];
   bool _isLoading = true;
+  // --- MODULE D1.4: Biến lưu số thông báo chưa đọc ---
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchTasks();
+    _fetchUnreadCount(); // Gọi lấy số lượng chưa đọc khi mở màn hình
+  }
+
+  // --- MODULE D1.4: Lấy số lượng thông báo chưa đọc ---
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final res = await ApiService.getUnreadNotificationCount();
+      if (!mounted) return;
+      if (res['success'] == true) {
+        final data = res['data'];
+        setState(() {
+          if (data is Map && data.containsKey('count')) {
+            _unreadCount = data['count'] ?? 0;
+          } else if (data is int) {
+            _unreadCount = data;
+          } else if (data is Map && data['data'] is int) {
+            _unreadCount = data['data'];
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   // --- MODULE B: Lấy danh sách Task ---
@@ -105,7 +128,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  // --- MODULE D: Hộp thoại Thông báo (D1.1, D1.2 & D1.3) ---
+  // --- MODULE D: Hộp thoại Thông báo (D1.1, D1.2, D1.3 & cập nhật D1.4) ---
   void _showNotificationsDialog() {
     showDialog(
       context: context,
@@ -115,7 +138,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Thông báo (Module D)', style: TextStyle(fontSize: 18)),
-              // Chức năng D1.3: Nút đánh dấu tất cả là đã đọc
               TextButton.icon(
                 icon: const Icon(Icons.done_all, size: 18),
                 label: const Text('Đọc tất cả', style: TextStyle(fontSize: 12)),
@@ -124,7 +146,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   if (dialogCtx.mounted) {
                     if (res['success'] == true) {
                       Navigator.pop(dialogCtx);
-                      _showNotificationsDialog(); // Làm mới lại dialog để cập nhật giao diện
+                      _fetchUnreadCount(); // Cập nhật lại số lượng chưa đọc sau khi đọc tất cả
+                      _showNotificationsDialog();
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -183,7 +206,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           await ApiService.markAsRead(item['_id'].toString());
                           if (dialogCtx.mounted) {
                             Navigator.pop(dialogCtx);
-                            _showNotificationsDialog(); // Tải lại dialog để làm mới trạng thái
+                            _fetchUnreadCount(); // Làm mới số đếm chưa đọc
+                            _showNotificationsDialog();
                           }
                         }
                       },
@@ -408,11 +432,44 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(
         title: const Text('Danh sách Task'),
         actions: [
-          // Icon Thông báo (Module D)
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            tooltip: 'Thông báo',
-            onPressed: _showNotificationsDialog,
+          // Icon Thông báo kèm Badge đếm số chưa đọc (Chức năng D1.4)
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                tooltip: 'Thông báo',
+                onPressed: () {
+                  _showNotificationsDialog();
+                  _fetchUnreadCount();
+                },
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           // Icon Đăng xuất (Module A)
           IconButton(
