@@ -736,4 +736,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// E1.3: Thống kê công việc được giao & đang phụ trách của User
+  static Future<dynamic> getMyTaskStats() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/reports/my-task-stats'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data['data']};
+      }
+      return {
+        'success': false,
+        'message': 'Không thể lấy thống kê công việc phân công'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
