@@ -12,6 +12,8 @@ class _ReportScreenState extends State<ReportScreen> {
   Map<String, dynamic>? _summary;
   Map<String, dynamic>? _myTaskStats;
   List<dynamic> _userPerformance = [];
+  List<dynamic> _overdueTasks = [];
+  List<dynamic> _upcomingTasks = [];
   bool _isLoading = true;
 
   @override
@@ -25,12 +27,17 @@ class _ReportScreenState extends State<ReportScreen> {
     final summaryRes = await ApiService.getTaskSummary();
     final myStatsRes = await ApiService.getMyTaskStats();
     final perfRes = await ApiService.getUserPerformance();
+    final alertRes = await ApiService.getUpcomingAndOverdueTasks();
 
     if (mounted) {
       setState(() {
         if (summaryRes['success']) _summary = summaryRes['data'];
         if (myStatsRes['success']) _myTaskStats = myStatsRes['data'];
         if (perfRes['success']) _userPerformance = perfRes['data'] ?? [];
+        if (alertRes['success']) {
+          _overdueTasks = alertRes['data']['overdue'] ?? [];
+          _upcomingTasks = alertRes['data']['upcoming'] ?? [];
+        }
         _isLoading = false;
       });
     }
@@ -40,7 +47,7 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thống kê công việc (Màn 10)'),
+        title: const Text('Thống kê & Cảnh báo (Màn 10)'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -55,8 +62,8 @@ class _ReportScreenState extends State<ReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('1. Thống kê theo trạng thái (E1.1)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // 1. THỐNG KÊ TỔNG QUAN (E1.1)
+            const Text('1. Thống kê theo trạng thái', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             if (_summary != null)
               Wrap(
@@ -71,29 +78,36 @@ class _ReportScreenState extends State<ReportScreen> {
                   _buildStatCard('Tỷ lệ xong', '${_summary!['completionRate']}%', Colors.teal),
                 ],
               ),
+
             const SizedBox(height: 28),
-            const Text('2. Công việc được giao & Phụ trách (E1.3)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
+            // 2. CẢNH BÁO QUÁ HẠN VÀ SẮP ĐẾN HẠN (E2)
+            const Text('2. Cảnh báo thời hạn công việc (E2)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildTaskAlertList('Công việc đã quá hạn', _overdueTasks, Colors.red, Icons.warning_amber),
+            const SizedBox(height: 16),
+            _buildTaskAlertList('Công việc sắp đến hạn (trong 48h)', _upcomingTasks, Colors.orange, Icons.access_time),
+
+            const SizedBox(height: 28),
+
+            // 3. THỐNG KÊ PHÂN CÔNG (E1.3)
+            const Text('3. Công việc được giao & Phụ trách', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             if (_myTaskStats != null)
               Row(
                 children: [
-                  Expanded(
-                    child: _buildInfoTile('Phụ trách chính', '${_myTaskStats!['primaryTasks']}', Icons.star, Colors.amber.shade800),
-                  ),
+                  Expanded(child: _buildInfoTile('Phụ trách chính', '${_myTaskStats!['primaryTasks']}', Icons.star, Colors.amber.shade800)),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildInfoTile('Được giao', '${_myTaskStats!['assignedTasks']}', Icons.assignment_ind, Colors.indigo),
-                  ),
+                  Expanded(child: _buildInfoTile('Được giao', '${_myTaskStats!['assignedTasks']}', Icons.assignment_ind, Colors.indigo)),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildInfoTile('Do tôi tạo', '${_myTaskStats!['createdTasks']}', Icons.create_new_folder, Colors.purple),
-                  ),
+                  Expanded(child: _buildInfoTile('Do tôi tạo', '${_myTaskStats!['createdTasks']}', Icons.create_new_folder, Colors.purple)),
                 ],
               ),
+
             const SizedBox(height: 28),
-            const Text('3. Hiệu suất theo thành viên (E1.2)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
+            // 4. HIỆU SUẤT THÀNH VIÊN (E1.2)
+            const Text('4. Hiệu suất theo thành viên', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             _userPerformance.isEmpty
                 ? const Text('Chưa có dữ liệu thành viên')
@@ -109,8 +123,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     leading: CircleAvatar(child: Text('${index + 1}')),
                     title: Text(item['userName'] ?? item['email'] ?? 'N/A'),
                     subtitle: Text('Hoàn thành: ${item['completed']}/${item['totalAssigned']} task'),
-                    trailing: Text('${rate.toStringAsFixed(1)}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    trailing: Text('${rate.toStringAsFixed(1)}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 );
               },
@@ -121,16 +134,60 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
+  Widget _buildTaskAlertList(String title, List<dynamic> tasks, Color color, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text('$title (${tasks.length})', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          tasks.isEmpty
+              ? const Text('Không có công việc nào', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))
+              : ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: tasks.length,
+            itemBuilder: (context, i) {
+              final task = tasks[i];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: ListTile(
+                  dense: true,
+                  title: Text(task['title'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('Hạn: ${task['dueDate'] != null ? task['dueDate'].toString().split('T')[0] : 'N/A'}'),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+                    child: Text(task['status'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 11)),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatCard(String title, String value, Color color) {
     return SizedBox(
       width: 150,
       child: Card(
         color: color.withOpacity(0.08),
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: color, width: 1.5),
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(side: BorderSide(color: color, width: 1.5), borderRadius: BorderRadius.circular(8)),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
           child: Column(
