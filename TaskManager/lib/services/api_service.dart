@@ -655,4 +655,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// D3.1: Lấy nhật ký gửi email của công việc (email_logs)
+  static Future<dynamic> getEmailLogs(String taskId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/tasks/$taskId/email-logs'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data};
+      }
+      return {
+        'success': false,
+        'message': 'Không lấy được nhật ký email (${response.statusCode})'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
