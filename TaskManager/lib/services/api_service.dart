@@ -715,4 +715,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// E1.2: Lấy thống kê hiệu suất theo thành viên (Performance by User)
+  static Future<dynamic> getUserPerformance() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/reports/user-performance'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data['data']};
+      }
+      return {
+        'success': false,
+        'message': 'Không thể lấy dữ liệu hiệu suất thành viên'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
