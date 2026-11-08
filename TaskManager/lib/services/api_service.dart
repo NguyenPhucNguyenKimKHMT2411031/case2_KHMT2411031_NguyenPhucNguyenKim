@@ -757,4 +757,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// E2: Lấy danh sách công việc sắp đến hạn và đã quá hạn
+  static Future<dynamic> getUpcomingAndOverdueTasks() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/reports/upcoming-overdue'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data['data']};
+      }
+      return {
+        'success': false,
+        'message': 'Không thể lấy danh sách công việc sắp/quá hạn'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
