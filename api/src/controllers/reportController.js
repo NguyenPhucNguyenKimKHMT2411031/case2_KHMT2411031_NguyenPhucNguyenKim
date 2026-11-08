@@ -24,7 +24,7 @@ exports.getTaskSummary = async (req, res) => {
         inProgressTasks,
         pendingTasks,
         overdueTasks,
-        completionRate: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(2) : 0,
+        completionRate: totalTasks > 0 ? Number(((completedTasks / totalTasks) * 100).toFixed(2)) : 0,
       },
     });
   } catch (error) {
@@ -38,7 +38,7 @@ exports.getUserPerformance = async (req, res) => {
     const performance = await Task.aggregate([
       {
         $group: {
-          _id: '$assignedTo',
+          _id: '$primaryAssignee',
           totalAssigned: { $sum: 1 },
           completed: {
             $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
@@ -57,18 +57,49 @@ exports.getUserPerformance = async (req, res) => {
       {
         $project: {
           _id: 1,
-          userName: '$user.name',
+          userName: '$user.fullName',
           email: '$user.email',
           totalAssigned: 1,
           completed: 1,
           completionRate: {
-            $multiply: [{ $divide: ['$completed', '$totalAssigned'] }, 100],
+            $cond: [
+              { $gt: ['$totalAssigned', 0] },
+              { $multiply: [{ $divide: ['$completed', '$totalAssigned'] }, 100] },
+              0
+            ]
           },
         },
       },
     ]);
 
     return res.status(200).json({ success: true, data: performance });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// E1.3: Thống kê công việc được giao & đang phụ trách của User hiện tại
+exports.getMyTaskStatistics = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+
+    // Công việc tôi phụ trách chính
+    const primaryTasks = await Task.countDocuments({ primaryAssignee: userId });
+
+    // Công việc tôi được giao (nằm trong mảng assignees)
+    const assignedTasks = await Task.countDocuments({ assignees: userId });
+
+    // Công việc do tôi khởi tạo
+    const createdTasks = await Task.countDocuments({ createdBy: userId });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        primaryTasks,
+        assignedTasks,
+        createdTasks,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
