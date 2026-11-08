@@ -105,13 +105,39 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  // --- MODULE D: Hộp thoại Thông báo (D1.1 & D1.2) ---
+  // --- MODULE D: Hộp thoại Thông báo (D1.1, D1.2 & D1.3) ---
   void _showNotificationsDialog() {
     showDialog(
       context: context,
       builder: (dialogCtx) {
         return AlertDialog(
-          title: const Text('Thông báo (Module D)'),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Thông báo (Module D)', style: TextStyle(fontSize: 18)),
+              // Chức năng D1.3: Nút đánh dấu tất cả là đã đọc
+              TextButton.icon(
+                icon: const Icon(Icons.done_all, size: 18),
+                label: const Text('Đọc tất cả', style: TextStyle(fontSize: 12)),
+                onPressed: () async {
+                  final res = await ApiService.markAllAsRead();
+                  if (dialogCtx.mounted) {
+                    if (res['success'] == true) {
+                      Navigator.pop(dialogCtx);
+                      _showNotificationsDialog(); // Làm mới lại dialog để cập nhật giao diện
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(res['message']?.toString() ?? 'Lỗi cập nhật tất cả thông báo'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
           content: SizedBox(
             width: 400,
             height: 300,
@@ -157,7 +183,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           await ApiService.markAsRead(item['_id'].toString());
                           if (dialogCtx.mounted) {
                             Navigator.pop(dialogCtx);
-                            _showNotificationsDialog(); // Tải lại dialog để làm mới danh sách
+                            _showNotificationsDialog(); // Tải lại dialog để làm mới trạng thái
                           }
                         }
                       },
