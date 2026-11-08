@@ -6,4 +6,5 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 router.get('/reports/summary', verifyToken, reportController.getTaskSummary);
 router.get('/reports/user-performance', verifyToken, reportController.getUserPerformance);
 router.get('/reports/my-task-stats', verifyToken, reportController.getMyTaskStatistics);
+router.get('/reports/upcoming-overdue', verifyToken, reportController.getUpcomingAndOverdueTasks);
 module.exports = router;

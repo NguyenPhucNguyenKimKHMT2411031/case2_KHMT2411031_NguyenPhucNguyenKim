@@ -104,3 +104,35 @@ exports.getMyTaskStatistics = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+// E2: Hiển thị công việc sắp đến hạn và đã quá hạn
+exports.getUpcomingAndOverdueTasks = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const now = new Date();
+    const next48Hours = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    // Công việc đã quá hạn (chưa completed)
+    const overdueTasks = await Task.find({
+      $or: [{ primaryAssignee: userId }, { assignees: userId }],
+      dueDate: { $lt: now },
+      status: { $ne: 'completed' },
+    }).sort({ dueDate: 1 });
+
+    // Công việc sắp đến hạn (trong vòng 48h tới, chưa completed)
+    const upcomingTasks = await Task.find({
+      $or: [{ primaryAssignee: userId }, { assignees: userId }],
+      dueDate: { $gte: now, $lte: next48Hours },
+      status: { $ne: 'completed' },
+    }).sort({ dueDate: 1 });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        overdue: overdueTasks,
+        upcoming: upcomingTasks,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
