@@ -1,7 +1,19 @@
-require('dotenv').config();
 const app = require('./app');
-const connectDB = require('./config/database');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-connectDB()
-  .then(() => app.listen(process.env.PORT, () => console.log('API chạy cổng ' + process.env.PORT)))
-  .catch((e) => console.error('Lỗi kết nối DB:', e.message));
+const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskmanager';
+
+console.log('Đang kết nối MongoDB...');
+
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('--> MongoDB kết nối thành công!');
+    app.listen(PORT, () => {
+      console.log(`--> Server đang chạy thành công tại http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('--> LỖI KẾT NỐI MONGODB:', err.message);
+  });
