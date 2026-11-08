@@ -510,6 +510,7 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
 // --- D1.3: Đánh dấu tất cả thông báo là đã đọc ---
   static Future<dynamic> markAllAsRead() async {
     try {
@@ -524,7 +525,28 @@ class ApiService {
       }
       return {
         'success': false,
-        'message': 'Không thể đánh dấu tất cả thông báo là đã đọc (${response.statusCode})'
+        'message': 'Không thể đánh dấu tất cả thông báo là đã đọc (${response
+            .statusCode})'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
+
+  static Future<dynamic> getUnreadNotificationCount() async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/notifications/unread-count'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data};
+      }
+      return {
+        'success': false,
+        'message': 'Không thể đếm thông báo chưa đọc (${response.statusCode})'
       };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
