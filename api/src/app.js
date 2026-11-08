@@ -22,10 +22,11 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes')); 
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
-// Nested Routes & Notifications
+// Nested Routes & Notifications & Reports
 app.use('/api/tasks/:id/assignees', require('./routes/assignmentRoutes'));
 app.use('/api/tasks/:id/shares', require('./routes/taskShareRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api', require('./routes/reportRoutes')); // Module E: Reports & Analytics
 
 // 5. Middleware bắt lỗi 404 cho các Route không tồn tại
 app.use((req, res, next) => {
