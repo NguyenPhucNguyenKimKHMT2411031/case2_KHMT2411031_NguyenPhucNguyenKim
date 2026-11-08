@@ -136,3 +136,21 @@ exports.getUpcomingAndOverdueTasks = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+// E3: Lấy nhật ký hoạt động của công việc (Task Activity Logs)
+exports.getTaskActivityLogs = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    
+    // Tìm danh sách lịch sử thao tác của công việc (sắp xếp mới nhất lên đầu)
+    const logs = await ActivityLog.find({ task: taskId })
+      .populate('user', 'fullName email')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: logs,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
