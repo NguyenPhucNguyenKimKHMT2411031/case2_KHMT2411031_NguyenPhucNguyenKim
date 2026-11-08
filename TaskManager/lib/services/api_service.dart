@@ -778,4 +778,25 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
+// E3: Lấy lịch sử hoạt động của công việc
+  static Future<dynamic> getTaskActivityLogs(String taskId) async {
+    try {
+      final headers = await getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/reports/tasks/$taskId/logs'),
+        headers: headers,
+      );
+      final data = _safeJsonDecode(response);
+      if (response.statusCode == 200 && data != null) {
+        return {'success': true, 'data': data['data']};
+      }
+      return {
+        'success': false,
+        'message': 'Không lấy được nhật ký hoạt động của công việc'
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+    }
+  }
 }
