@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../models/task_model.dart';
 import '../services/api_service.dart';
 import 'auth/login_screen.dart';
+
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
 
@@ -21,59 +21,80 @@ class _TaskListScreenState extends State<TaskListScreen> {
     _fetchTasks();
   }
 
+  // --- MODULE B: Lấy danh sách Task ---
   Future<void> _fetchTasks() async {
     setState(() => _isLoading = true);
     try {
-      final headers = await ApiService.getHeaders();
-      final res = await http.get(
-        Uri.parse('${ApiService.baseUrl}/tasks'),
-        headers: headers,
-      );
+      final res = await ApiService.getTasks();
 
       if (!mounted) return;
 
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
+      if (res['success'] == true) {
+        final rawData = res['data'];
+        List taskList = [];
+
+        if (rawData is List) {
+          taskList = rawData;
+        } else if (rawData is Map && rawData['data'] is List) {
+          taskList = rawData['data'];
+        }
+
         setState(() {
-          _tasks = data.map((json) => Task.fromJson(json)).toList();
+          _tasks = taskList.map((json) => Task.fromJson(json)).toList();
         });
-      } else if (res.statusCode == 401) {
-        _handleLogout();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message']?.toString() ?? 'Lỗi tải danh sách task'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tải danh sách task: $e')),
+        SnackBar(
+          content: Text('Lỗi tải danh sách task: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // --- MODULE B: Xóa Task ---
   Future<void> _deleteTask(String id) async {
     try {
-      final headers = await ApiService.getHeaders();
-      final res = await http.delete(
-        Uri.parse('${ApiService.baseUrl}/tasks/$id'),
-        headers: headers,
-      );
+      final res = await ApiService.deleteTask(id);
 
       if (!mounted) return;
 
-      if (res.statusCode == 200) {
+      if (res['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Xóa task thành công')),
         );
         _fetchTasks();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message']?.toString() ?? 'Xóa task thất bại'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi xóa task: $e')),
+        SnackBar(
+          content: Text('Lỗi xóa task: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
+  // --- MODULE A: Đăng xuất ---
   Future<void> _handleLogout() async {
     await ApiService.clearToken();
     if (!mounted) return;
@@ -84,6 +105,168 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
+  // --- MODULE D: Hộp thoại Thông báo (D1.1, D1.2 & D1.3) ---
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Thông báo (Module D)', style: TextStyle(fontSize: 18)),
+              // Chức năng D1.3: Nút đánh dấu tất cả là đã đọc
+              TextButton.icon(
+                icon: const Icon(Icons.done_all, size: 18),
+                label: const Text('Đọc tất cả', style: TextStyle(fontSize: 12)),
+                onPressed: () async {
+                  final res = await ApiService.markAllAsRead();
+                  if (dialogCtx.mounted) {
+                    if (res['success'] == true) {
+                      Navigator.pop(dialogCtx);
+                      _showNotificationsDialog(); // Làm mới lại dialog để cập nhật giao diện
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(res['message']?.toString() ?? 'Lỗi cập nhật tất cả thông báo'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 400,
+            height: 300,
+            child: FutureBuilder<dynamic>(
+              future: ApiService.getNotifications(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError || snapshot.data == null) {
+                  return Center(child: Text('Lỗi: ${snapshot.error ?? "Không thể tải dữ liệu"}'));
+                }
+
+                final res = snapshot.data as Map<String, dynamic>;
+                List notifications = [];
+
+                if (res['success'] == true) {
+                  if (res['data'] is List) {
+                    notifications = res['data'];
+                  } else if (res['data'] is Map && res['data']['notifications'] is List) {
+                    notifications = res['data']['notifications'];
+                  }
+                }
+
+                if (notifications.isEmpty) {
+                  return const Center(child: Text('Không có thông báo nào'));
+                }
+
+                return ListView.builder(
+                  itemCount: notifications.length,
+                  itemBuilder: (context, index) {
+                    final item = notifications[index] as Map<String, dynamic>;
+                    final bool isRead = item['isRead'] ?? false;
+                    return ListTile(
+                      leading: Icon(
+                        isRead ? Icons.drafts : Icons.mark_email_unread,
+                        color: isRead ? Colors.grey : Colors.blue,
+                      ),
+                      title: Text(item['title']?.toString() ?? item['message']?.toString() ?? 'Thông báo'),
+                      subtitle: Text(item['message']?.toString() ?? item['createdAt']?.toString() ?? ''),
+                      onTap: () async {
+                        if (!isRead && item['_id'] != null) {
+                          await ApiService.markAsRead(item['_id'].toString());
+                          if (dialogCtx.mounted) {
+                            Navigator.pop(dialogCtx);
+                            _showNotificationsDialog(); // Tải lại dialog để làm mới trạng thái
+                          }
+                        }
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- MODULE C: Hộp thoại Phân công Task ---
+  void _showAssignDialog(Task task) {
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          title: Text('Phân công: ${task.title}'),
+          content: TextField(
+            controller: emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email người nhận',
+              hintText: 'nguoinhan@gmail.com',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (email.isEmpty) return;
+                Navigator.pop(dialogCtx);
+
+                try {
+                  final res = await ApiService.shareTask(task.id, email, 'editor');
+
+                  if (!mounted) return;
+                  if (res['success'] == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Đã chia sẻ task cho $email')),
+                    );
+                    _fetchTasks();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(res['message']?.toString() ?? 'Phân công thất bại'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi phân công: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Gán Task'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- MODULE B: Dialog Tạo / Cập nhật Task ---
   void _showTaskDialog({Task? task}) {
     final titleController = TextEditingController(text: task?.title ?? '');
     final descController = TextEditingController(text: task?.description ?? '');
@@ -151,52 +334,70 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
+  // --- MODULE B: Tạo Task mới ---
   Future<void> _createTask(String title, String description, String status) async {
     try {
-      final headers = await ApiService.getHeaders();
-      final res = await http.post(
-        Uri.parse('${ApiService.baseUrl}/tasks'),
-        headers: headers,
-        body: jsonEncode({
-          'title': title,
-          'description': description,
-          'status': status,
-        }),
-      );
+      final res = await ApiService.createTask({
+        'title': title,
+        'description': description,
+        'status': status,
+        'priority': 'medium',
+        'type': 'personal',
+      });
 
       if (!mounted) return;
-      if (res.statusCode == 201) {
-        _fetchTasks();
+
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tạo Task thành công!')),
+        );
+        await _fetchTasks();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message']?.toString() ?? 'Tạo công việc thất bại'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tạo task: $e')),
+        SnackBar(
+          content: Text('Lỗi tạo task: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
+  // --- MODULE B: Cập nhật Task ---
   Future<void> _updateTask(String id, String title, String description, String status) async {
     try {
-      final headers = await ApiService.getHeaders();
-      final res = await http.put(
-        Uri.parse('${ApiService.baseUrl}/tasks/$id'),
-        headers: headers,
-        body: jsonEncode({
-          'title': title,
-          'description': description,
-          'status': status,
-        }),
-      );
+      final res = await ApiService.updateTask(id, {
+        'title': title,
+        'description': description,
+        'status': status,
+      });
 
       if (!mounted) return;
-      if (res.statusCode == 200) {
+      if (res['success'] == true) {
         _fetchTasks();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message']?.toString() ?? 'Lỗi cập nhật task'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi cập nhật task: $e')),
+        SnackBar(
+          content: Text('Lỗi cập nhật task: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -207,8 +408,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(
         title: const Text('Danh sách Task'),
         actions: [
+          // Icon Thông báo (Module D)
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            tooltip: 'Thông báo',
+            onPressed: _showNotificationsDialog,
+          ),
+          // Icon Đăng xuất (Module A)
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Đăng xuất',
             onPressed: _handleLogout,
           ),
         ],
@@ -235,10 +444,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Icon Phân công (Module C)
+                IconButton(
+                  icon: const Icon(Icons.person_add, color: Colors.green),
+                  tooltip: 'Phân công Task',
+                  onPressed: () => _showAssignDialog(task),
+                ),
+                // Icon Sửa Task (Module B)
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
                   onPressed: () => _showTaskDialog(task: task),
                 ),
+                // Icon Xóa Task (Module B)
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => _deleteTask(task.id),
