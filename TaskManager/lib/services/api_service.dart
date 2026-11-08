@@ -588,4 +588,20 @@ class ApiService {
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+static Future<dynamic> retryEmailLog(String logId) async {
+try {
+final headers = await getHeaders();
+final response = await http.post(
+Uri.parse('$baseUrl/email-logs/$logId/retry'),
+headers: headers,
+);
+final data = _safeJsonDecode(response);
+if (response.statusCode == 200 && data != null) {
+return {'success': true, 'data': data};
 }
+return {'success': false, 'message': 'Không thể thử lại email (${response.statusCode})'};
+} catch (e) {
+return {'success': false, 'message': 'Lỗi kết nối: $e'};
+}
+}
+  }
