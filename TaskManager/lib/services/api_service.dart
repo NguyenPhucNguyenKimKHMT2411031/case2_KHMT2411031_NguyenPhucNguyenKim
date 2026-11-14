@@ -57,9 +57,39 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  static Future<dynamic> getProjectById(String id) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.get(Uri.parse('$baseUrl/projects/$id'), headers: headers);
+    return jsonDecode(res.body);
+  }
+
   static Future<dynamic> createProject(String name, String description) async {
     final headers = Map<String, String>.from(await _authHeaders());
     final res = await http.post(Uri.parse('$baseUrl/projects'), headers: headers, body: jsonEncode({'name': name, 'description': description}));
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> updateProject(String id, String name, String description) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.put(Uri.parse('$baseUrl/projects/$id'), headers: headers, body: jsonEncode({'name': name, 'description': description}));
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> deleteProject(String id) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.delete(Uri.parse('$baseUrl/projects/$id'), headers: headers);
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> addMember(String projectId, String email) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.post(Uri.parse('$baseUrl/projects/$projectId/members'), headers: headers, body: jsonEncode({'email': email}));
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> removeMember(String projectId, String memberId) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.delete(Uri.parse('$baseUrl/projects/$projectId/members/$memberId'), headers: headers);
     return jsonDecode(res.body);
   }
 }
