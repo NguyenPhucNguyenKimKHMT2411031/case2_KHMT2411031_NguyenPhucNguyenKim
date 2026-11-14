@@ -17,9 +17,21 @@ exports.createTask = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// B6 - Lấy danh sách công việc kèm Tìm kiếm theo tên & Lọc theo trạng thái, ưu tiên
 exports.getTasksByProject = async (req, res) => {
   try {
-    const tasks = await Task.find({ project: req.params.projectId }).sort({ createdAt: -1 });
+    const { search, status, priority } = req.query;
+    const filter = { project: req.params.projectId };
+    if (search && search.trim() !== '') {
+      filter.title = { $regex: search.trim(),$options: 'i' };
+    }
+    if (status && status !== 'All') {
+      filter.status = status;
+    }
+    if (priority && priority !== 'All') {
+      filter.priority = priority;
+    }
+    const tasks = await Task.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, data: tasks });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -42,7 +54,6 @@ exports.updateTaskPriority = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// B5 - Thiết lập / cập nhật ngày bắt đầu và hạn hoàn thành
 exports.updateTaskDates = async (req, res) => {
   try {
     const { startDate, dueDate } = req.body;
