@@ -7,5 +7,6 @@ router.use(authMiddleware);
 router.post('/', taskController.createTask);
 router.get('/project/:projectId', taskController.getTasksByProject);
 router.patch('/:id/status', taskController.updateTaskStatus);
+router.patch('/:id/priority', taskController.updateTaskPriority);
 
 module.exports = router;

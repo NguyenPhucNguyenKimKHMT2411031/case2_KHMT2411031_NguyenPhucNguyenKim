@@ -92,4 +92,9 @@ class ApiService {
     final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/status'), headers: headers, body: jsonEncode({'status': status}));
     return jsonDecode(res.body);
   }
+  static Future<dynamic> updateTaskPriority(String taskId, String priority) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/priority'), headers: headers, body: jsonEncode({'priority': priority}));
+    return jsonDecode(res.body);
+  }
 }
