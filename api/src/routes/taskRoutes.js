@@ -8,5 +8,6 @@ router.post('/', taskController.createTask);
 router.get('/project/:projectId', taskController.getTasksByProject);
 router.patch('/:id/status', taskController.updateTaskStatus);
 router.patch('/:id/priority', taskController.updateTaskPriority);
+router.patch('/:id/dates', taskController.updateTaskDates);
 
 module.exports = router;
