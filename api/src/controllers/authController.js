@@ -2,7 +2,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// A1 - Đăng ký tài khoản
 exports.register = async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
@@ -15,19 +14,13 @@ exports.register = async (req, res) => {
     }
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-
     const user = await User.create({ fullName, email, passwordHash });
-    res.status(201).json({
-      success: true,
-      message: 'Đăng ký thành công',
-      data: { id: user._id, fullName: user.fullName, email: user.email }
-    });
+    res.status(201).json({ success: true, message: 'Đăng ký thành công', data: { id: user._id, fullName: user.fullName, email: user.email } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// A2 - Đăng nhập
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -42,19 +35,32 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
     }
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || 'secret123', { expiresIn: '7d' });
+    res.json({ success: true, message: 'Đăng nhập thành công', token, user: { id: user._id, fullName: user.fullName, email: user.email, avatarUrl: user.avatarUrl } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET || 'secret123',
-      { expiresIn: '7d' }
-    );
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-passwordHash');
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    res.json({ success: true, data: user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    res.json({
-      success: true,
-      message: 'Đăng nhập thành công',
-      token,
-      user: { id: user._id, fullName: user.fullName, email: user.email, avatarUrl: user.avatarUrl }
-    });
+exports.updateProfile = async (req, res) => {
+  try {
+    const { fullName, avatarUrl } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { ...(fullName && { fullName }), ...(avatarUrl !== undefined && { avatarUrl }) },
+      { new: true }
+    ).select('-passwordHash');
+    res.json({ success: true, message: 'Cập nhật hồ sơ thành công', data: user });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
