@@ -232,3 +232,23 @@ exports.validateAssignEmails = async (req, res) => {
 };
 
 
+
+// E1 - Thống kê tổng quan công việc của dự án theo trạng thái, ưu tiên và quá hạn
+exports.getProjectTaskStats = async (req, res) => {
+  try {
+    const tasks = await Task.find({ project: req.params.projectId });
+    const now = new Date();
+    const stats = {
+      total: tasks.length,
+      byStatus: { Todo: 0, 'In-Progress': 0, Done: 0 },
+      byPriority: { Low: 0, Medium: 0, High: 0 },
+      overdue: 0
+    };
+    for (const t of tasks) {
+      if (stats.byStatus[t.status] !== undefined) stats.byStatus[t.status]++;
+      if (stats.byPriority[t.priority] !== undefined) stats.byPriority[t.priority]++;
+      if (t.status !== 'Done' && t.dueDate && new Date(t.dueDate) < now) stats.overdue++;
+    }
+    res.json({ success: true, data: stats });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};

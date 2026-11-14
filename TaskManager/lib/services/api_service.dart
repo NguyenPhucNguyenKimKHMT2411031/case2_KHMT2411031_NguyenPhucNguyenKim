@@ -158,4 +158,9 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/notifications/check-deadlines'), headers: headers);
     return jsonDecode(res.body);
   }
+  static Future<dynamic> getProjectTaskStats(String projectId) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.get(Uri.parse('$baseUrl/tasks/project/$projectId/stats'), headers: headers);
+    return jsonDecode(res.body);
+  }
 }
