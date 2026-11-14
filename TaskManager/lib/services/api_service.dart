@@ -11,6 +11,7 @@ class ApiService {
     return {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
   }
 
+  // --- MODULE A ---
   static Future<dynamic> register(String fullName, String email, String password) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/register'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'fullName': fullName, 'email': email, 'password': password}));
     return jsonDecode(res.body);
@@ -46,6 +47,19 @@ class ApiService {
 
   static Future<dynamic> resetPassword(String email, String otp, String newPassword) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/reset-password'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'otp': otp, 'newPassword': newPassword}));
+    return jsonDecode(res.body);
+  }
+
+  // --- MODULE B ---
+  static Future<dynamic> getProjects() async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.get(Uri.parse('$baseUrl/projects'), headers: headers);
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> createProject(String name, String description) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.post(Uri.parse('$baseUrl/projects'), headers: headers, body: jsonEncode({'name': name, 'description': description}));
     return jsonDecode(res.body);
   }
 }
