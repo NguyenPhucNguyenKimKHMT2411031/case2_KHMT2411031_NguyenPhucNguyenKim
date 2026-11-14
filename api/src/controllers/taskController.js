@@ -1,5 +1,19 @@
 ﻿const Task = require('../models/Task');
 const User = require('../models/User');
+const Project = require('../models/Project');
+
+// C4 - Hàm kiểm tra quyền chỉnh sửa (edit) của user trên công việc
+async function canEditTask(task, userId) {
+  if (!task || !userId) return false;
+  const uid = userId.toString();
+  if (task.createdBy && task.createdBy.toString() === uid) return true;
+  if (task.leadAssignee && task.leadAssignee.toString() === uid) return true;
+  const proj = await Project.findById(task.project);
+  if (proj && proj.owner && proj.owner.toString() === uid) return true;
+  if (task.assignees.some(a => a.user.toString() === uid && a.permission === 'edit')) return true;
+  if (task.sharedWith.some(s => s.user.toString() === uid && s.permission === 'edit')) return true;
+  return false;
+}
 
 exports.createTask = async (req, res) => {
   try {
@@ -24,28 +38,40 @@ exports.getTasksByProject = async (req, res) => {
       .sort({ createdAt: -1 });
     if (sortBy === 'dueDate') tasks.sort((a, b) => (!a.dueDate ? 1 : !b.dueDate ? -1 : new Date(a.dueDate) - new Date(b.dueDate)));
     else if (sortBy === 'priority') { const rank = { High: 1, Medium: 2, Low: 3 }; tasks.sort((a, b) => (rank[a.priority] || 4) - (rank[b.priority] || 4)); }
-    res.json({ success: true, data: tasks });
+    const enriched = await Promise.all(tasks.map(async t => ({ ...t.toObject(), canEdit: await canEditTask(t, req.user.id) })));
+    res.json({ success: true, data: enriched });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
-
 exports.updateTaskStatus = async (req, res) => {
   try {
-    const task = await Task.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn chỉ có quyền xem (View), không được chỉnh sửa' });
+    task.status = req.body.status;
+    await task.save();
     res.json({ success: true, message: 'Đã cập nhật trạng thái', data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 exports.updateTaskPriority = async (req, res) => {
   try {
-    const task = await Task.findByIdAndUpdate(req.params.id, { priority: req.body.priority }, { new: true });
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn chỉ có quyền xem (View), không được chỉnh sửa' });
+    task.priority = req.body.priority;
+    await task.save();
     res.json({ success: true, message: 'Đã cập nhật ưu tiên', data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
 exports.updateTaskDates = async (req, res) => {
   try {
-    const { startDate, dueDate } = req.body;
-    const task = await Task.findByIdAndUpdate(req.params.id, { startDate: startDate || null, dueDate: dueDate || null }, { new: true });
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn chỉ có quyền xem (View), không được chỉnh sửa' });
+    task.startDate = req.body.startDate || null;
+    task.dueDate = req.body.dueDate || null;
+    await task.save();
     res.json({ success: true, message: 'Đã cập nhật thời gian', data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
@@ -55,6 +81,7 @@ exports.assignUsersByEmail = async (req, res) => {
     const { emails, permission } = req.body;
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn không có quyền giao việc' });
     const emailList = Array.isArray(emails) ? emails : String(emails || '').split(',');
     let added = 0;
     for (const raw of emailList) {
@@ -70,8 +97,10 @@ exports.assignUsersByEmail = async (req, res) => {
 exports.setLeadAssignee = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn không có quyền chỉ định phụ trách chính' });
     const user = await User.findOne({ email: (req.body.email || '').trim().toLowerCase() });
-    if (!task || !user) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc hoặc email người dùng' });
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy email người dùng' });
     task.leadAssignee = user._id;
     if (!task.assignees.some(a => a.user.toString() === user._id.toString())) task.assignees.push({ user: user._id, permission: 'edit' });
     await task.save();
@@ -79,20 +108,17 @@ exports.setLeadAssignee = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// C3 - Chia sẻ công việc theo email
 exports.shareTaskByEmail = async (req, res) => {
   try {
     const { emails, permission } = req.body;
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn không có quyền chia sẻ công việc' });
     const emailList = Array.isArray(emails) ? emails : String(emails || '').split(',');
     let sharedCount = 0;
     for (const raw of emailList) {
       const user = await User.findOne({ email: raw.trim().toLowerCase() });
-      if (user && !task.sharedWith.some(s => s.user.toString() === user._id.toString())) {
-        task.sharedWith.push({ user: user._id, permission: permission || 'view' });
-        sharedCount++;
-      }
+      if (user && !task.sharedWith.some(s => s.user.toString() === user._id.toString())) { task.sharedWith.push({ user: user._id, permission: permission || 'view' }); sharedCount++; }
     }
     if (sharedCount === 0) return res.status(400).json({ success: false, message: 'Email không tồn tại hoặc đã được chia sẻ' });
     await task.save();
