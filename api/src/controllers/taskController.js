@@ -146,3 +146,22 @@ exports.getTaskParticipants = async (req, res) => {
     });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
+// C6 - Thu hồi quyền hoặc gỡ người khỏi công việc
+exports.removeTaskParticipant = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi hoặc gỡ người' });
+    }
+    const targetId = req.params.userId;
+    task.assignees = task.assignees.filter(a => a.user.toString() !== targetId);
+    task.sharedWith = task.sharedWith.filter(s => s.user.toString() !== targetId);
+    if (task.leadAssignee && task.leadAssignee.toString() === targetId) {
+      task.leadAssignee = null;
+    }
+    await task.save();
+    res.json({ success: true, message: 'Đã thu hồi quyền và gỡ người dùng khỏi công việc', data: task });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
