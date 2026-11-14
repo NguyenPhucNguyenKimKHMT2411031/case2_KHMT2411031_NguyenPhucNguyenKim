@@ -94,6 +94,31 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       ],
     )));
   }
+
+  Future<void> _showParticipantsDialog(String taskId, String taskTitle) async {
+    final res = await ApiService.getTaskParticipants(taskId);
+    if (!mounted || res['success'] != true) return;
+    final data = res['data'];
+    final lead = data['leadAssignee'];
+    final assignees = (data['assignees'] as List?) ?? [];
+    final shared = (data['sharedWith'] as List?) ?? [];
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: Text('Danh sách tham gia: $taskTitle'),
+      content: SizedBox(width: 400, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        const Text('★ Phụ trách chính:', style: TextStyle(fontWeight: FontWeight.bold)),
+        ListTile(dense: true, title: Text(lead != null ? '${lead['fullName']} (${lead['email']})' : 'Chưa chỉ định')),
+        const Divider(),
+        Text('Người được giao việc (${assignees.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
+        if (assignees.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa giao cho ai'))
+        else ...assignees.map((a) => ListTile(dense: true, leading: const Icon(Icons.person), title: Text(a['user']?['fullName'] ?? ''), subtitle: Text(a['user']?['email'] ?? ''), trailing: Chip(label: Text(a['permission'] ?? 'edit')))),
+        const Divider(),
+        Text('Người được chia sẻ (${shared.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
+        if (shared.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa chia sẻ cho ai'))
+        else ...shared.map((s) => ListTile(dense: true, leading: const Icon(Icons.share), title: Text(s['user']?['fullName'] ?? ''), subtitle: Text(s['user']?['email'] ?? ''), trailing: Chip(label: Text(s['permission'] ?? 'view')))),
+      ]))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
+    ));
+  }
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -122,11 +147,12 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 const SizedBox(width: 8),
                 Chip(label: Text(canEdit ? 'Quyền: Chỉnh sửa' : 'Quyền: Chỉ xem', style: const TextStyle(fontSize: 11)), backgroundColor: canEdit ? Colors.green.shade100 : Colors.grey.shade200),
               ])),
-              DropdownButton<String>(value: t['status'] ?? 'Todo', items: ['Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: canEdit ? (v) async { if (v != null) { final r = await ApiService.updateTaskStatus(t['_id'], v); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } } } : null),
+              DropdownButton<String>(value: t['status'] ?? 'Todo', items: ['Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: canEdit ? (v) async { if (v != null) { await ApiService.updateTaskStatus(t['_id'], v); _loadData(); } } : null),
             ]),
             Row(children: [
               Text('Ưu tiên: ${t['priority']} • Hạn: ${_fmtDate(t['dueDate'])}'),
               const Spacer(),
+              TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '')),
               if (canEdit) TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
               if (canEdit) TextButton(onPressed: () => _showShareDialog(t), child: const Text('Chia sẻ')),
             ]),

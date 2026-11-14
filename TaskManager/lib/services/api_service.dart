@@ -123,4 +123,9 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/share'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
+  static Future<dynamic> getTaskParticipants(String taskId) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/participants'), headers: headers);
+    return jsonDecode(res.body);
+  }
 }

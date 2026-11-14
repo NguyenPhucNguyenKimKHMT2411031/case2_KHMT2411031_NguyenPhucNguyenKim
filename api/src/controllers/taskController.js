@@ -125,3 +125,24 @@ exports.shareTaskByEmail = async (req, res) => {
     res.json({ success: true, message: `Đã chia sẻ công việc cho ${sharedCount} người`, data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
+// C5 - Xem chi tiết danh sách người phụ trách, người được giao và người được chia sẻ
+exports.getTaskParticipants = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id)
+      .populate('createdBy', 'fullName email')
+      .populate('leadAssignee', 'fullName email')
+      .populate('assignees.user', 'fullName email')
+      .populate('sharedWith.user', 'fullName email');
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    res.json({
+      success: true,
+      data: {
+        createdBy: task.createdBy,
+        leadAssignee: task.leadAssignee,
+        assignees: task.assignees,
+        sharedWith: task.sharedWith
+      }
+    });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
