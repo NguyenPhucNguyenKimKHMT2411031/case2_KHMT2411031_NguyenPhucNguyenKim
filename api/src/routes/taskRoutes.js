@@ -10,6 +10,7 @@ router.delete('/:id/participants/:userId', taskController.removeTaskParticipant)
 router.patch('/:id/status', taskController.updateTaskStatus);
 router.patch('/:id/priority', taskController.updateTaskPriority);
 router.patch('/:id/dates', taskController.updateTaskDates);
+router.post('/:id/assign/validate', taskController.validateAssignEmails);
 router.post('/:id/assign', taskController.assignUsersByEmail);
 router.patch('/:id/lead', taskController.setLeadAssignee);
 router.post('/:id/share', taskController.shareTaskByEmail);
