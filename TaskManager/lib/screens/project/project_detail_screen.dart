@@ -179,6 +179,45 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (_project == null) return const Scaffold(body: Center(child: Text('Không tải được dự án')));
     return Scaffold(
       appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án'), actions: [
+        IconButton(
+          icon: const Icon(Icons.bar_chart),
+          tooltip: 'Thống kê tiến độ dự án',
+          onPressed: () async {
+            final res = await ApiService.getProjectTaskStats(widget.projectId);
+            if (!mounted || res['success'] != true) return;
+            final d = res['data'];
+            final int total = d['total'] ?? 0;
+            final byS = d['byStatus'] ?? {};
+            final byP = d['byPriority'] ?? {};
+            final int done = byS['Done'] ?? 0;
+            final double rate = total == 0 ? 0 : done / total;
+            Widget bar(String label, int val, Color color) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('$label: $val / $total'),
+                const SizedBox(height: 2),
+                LinearProgressIndicator(value: total == 0 ? 0 : val / total, color: color, minHeight: 8),
+              ]),
+            );
+            showDialog(context: context, builder: (ctx) => AlertDialog(
+              title: const Text('Thống kê công việc dự án'),
+              content: SizedBox(width: 380, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Tổng số việc: $total • Hoàn thành: ${(rate * 100).toStringAsFixed(0)}% • Quá hạn: ${d['overdue'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(),
+                const Text('Theo trạng thái:', style: TextStyle(fontWeight: FontWeight.bold)),
+                bar('Todo', byS['Todo'] ?? 0, Colors.grey),
+                bar('In-Progress', byS['In-Progress'] ?? 0, Colors.blue),
+                bar('Done', done, Colors.green),
+                const Divider(),
+                const Text('Theo mức độ ưu tiên:', style: TextStyle(fontWeight: FontWeight.bold)),
+                bar('High (Cao)', byP['High'] ?? 0, Colors.red),
+                bar('Medium (Trung bình)', byP['Medium'] ?? 0, Colors.orange),
+                bar('Low (Thấp)', byP['Low'] ?? 0, Colors.teal),
+              ]))),
+              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
+            ));
+          },
+        ),
         IconButton(icon: const Icon(Icons.alarm), tooltip: 'Quét nhắc hạn', onPressed: () async { final r = await ApiService.checkDeadlines(); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }),
         IconButton(icon: Badge(isLabelVisible: _unreadCount > 0, label: Text('$_unreadCount'), child: const Icon(Icons.notifications)), onPressed: _openNotificationsDialog),
       ]),
@@ -224,3 +263,4 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 }
+
