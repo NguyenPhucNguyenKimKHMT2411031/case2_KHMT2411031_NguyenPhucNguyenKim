@@ -1,6 +1,7 @@
 ﻿const Task = require('../models/Task');
 const User = require('../models/User');
 const Project = require('../models/Project');
+const Notification = require('../models/Notification');
 const { sendMailNotification } = require('../utils/mailer');
 
 async function canEditTask(task, userId) {
@@ -101,6 +102,7 @@ exports.assignUsersByEmail = async (req, res) => {
 
     const previewLinks = [];
     for (const u of newlyAssigned) {
+      await Notification.create({ recipient: u._id, sender: req.user.id, type: 'assign', title: 'Được giao công việc mới', message: `Bạn được giao việc "${task.title}" (quyền: ${permission || 'edit'})`, task: task._id });
       const mailRes = await sendMailNotification({
         to: u.email,
         subject: `[Task Manager] Bạn được giao công việc mới: ${task.title}`,
@@ -134,6 +136,7 @@ exports.setLeadAssignee = async (req, res) => {
     task.leadAssignee = user._id;
     if (!task.assignees.some(a => a.user.toString() === user._id.toString())) task.assignees.push({ user: user._id, permission: 'edit' });
     await task.save();
+    await Notification.create({ recipient: user._id, sender: req.user.id, type: 'lead', title: 'Chỉ định phụ trách chính', message: `Bạn là phụ trách chính của "${task.title}"`, task: task._id });
     await sendMailNotification({
       to: user.email,
       subject: `[Task Manager] Bạn được chỉ định phụ trách chính: ${task.title}`,
@@ -227,4 +230,5 @@ exports.validateAssignEmails = async (req, res) => {
     res.json({ success: true, data: { validUsers, invalidEmails, permission: permission || 'edit' } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
 
