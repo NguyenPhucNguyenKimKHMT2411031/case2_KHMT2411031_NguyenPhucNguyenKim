@@ -153,4 +153,9 @@ class ApiService {
     final res = await http.patch(Uri.parse('$baseUrl/notifications/read-all'), headers: headers);
     return jsonDecode(res.body);
   }
+  static Future<dynamic> checkDeadlines() async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.post(Uri.parse('$baseUrl/notifications/check-deadlines'), headers: headers);
+    return jsonDecode(res.body);
+  }
 }
