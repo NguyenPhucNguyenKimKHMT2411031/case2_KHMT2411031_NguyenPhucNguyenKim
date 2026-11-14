@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:task_manager/services/api_service.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -14,6 +14,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   bool _loading = true;
   int _unreadCount = 0;
   final _searchCtrl = TextEditingController();
+  String _roleTab = 'Tất cả';
   String _filterStatus = 'All', _filterPriority = 'All', _sortBy = 'createdAt';
 
   @override
@@ -32,266 +33,211 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     });
   }
 
+  List<dynamic> get _filteredTasks {
+    if (_roleTab == 'Tất cả') return _tasks;
+    if (_roleTab == 'Của tôi') return _tasks.where((t) => t['canEdit'] == true && ((t['assignees'] as List?)?.isEmpty ?? true)).toList();
+    if (_roleTab == 'Được giao') return _tasks.where((t) => ((t['assignees'] as List?)?.isNotEmpty ?? false) || t['leadAssignee'] != null).toList();
+    if (_roleTab == 'Được chia sẻ') return _tasks.where((t) => (t['sharedWith'] as List?)?.isNotEmpty ?? false).toList();
+    return _tasks;
+  }
+
   String _fmtDate(dynamic iso) {
     final d = iso == null ? null : DateTime.tryParse(iso.toString());
-    return d == null ? 'Chưa đặt' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    return d == null ? '' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
+
+  String _statusVi(String? s) => s == 'In-Progress' ? 'Đang thực hiện' : s == 'Done' ? 'Hoàn thành' : 'Chưa thực hiện';
+  Color _statusColor(String? s) => s == 'In-Progress' ? Colors.blue : s == 'Done' ? Colors.green : Colors.grey;
+
   void _showCreateTaskDialog() {
     final titleCtrl = TextEditingController(), descCtrl = TextEditingController();
-    String priority = 'Medium'; DateTime? startDate, dueDate;
+    String priority = 'Medium'; DateTime? dueDate;
     showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
       title: const Text('Thêm công việc mới'),
-      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Tên công việc *', border: OutlineInputBorder())),
         const SizedBox(height: 10),
         TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder())),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(value: priority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['Low', 'Medium', 'High'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setS(() => priority = v ?? 'Medium')),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: OutlinedButton(onPressed: () async { final p = await showDatePicker(context: ctx, initialDate: DateTime.now(), firstDate: DateTime(2024), lastDate: DateTime(2030)); if (p != null) setS(() => startDate = p); }, child: Text(startDate == null ? 'Bắt đầu' : _fmtDate(startDate!.toIso8601String())))),
-          const SizedBox(width: 8),
-          Expanded(child: OutlinedButton(onPressed: () async { final p = await showDatePicker(context: ctx, initialDate: startDate ?? DateTime.now(), firstDate: DateTime(2024), lastDate: DateTime(2030)); if (p != null) setS(() => dueDate = p); }, child: Text(dueDate == null ? 'Hạn chót' : _fmtDate(dueDate!.toIso8601String())))),
-        ]),
-      ])),
+        OutlinedButton(onPressed: () async { final p = await showDatePicker(context: ctx, initialDate: DateTime.now(), firstDate: DateTime(2024), lastDate: DateTime(2030)); if (p != null) setS(() => dueDate = p); }, child: Text(dueDate == null ? 'Chọn hạn chót' : 'Hạn: ${_fmtDate(dueDate!.toIso8601String())}')),
+      ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         ElevatedButton(onPressed: () async {
           if (titleCtrl.text.trim().isEmpty) return; Navigator.pop(ctx);
-          final res = await ApiService.createTask({'projectId': widget.projectId, 'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim(), 'priority': priority, 'startDate': startDate?.toIso8601String(), 'dueDate': dueDate?.toIso8601String()});
-          if (mounted && res['success'] == true) _loadData();
+          await ApiService.createTask({'projectId': widget.projectId, 'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim(), 'priority': priority, 'dueDate': dueDate?.toIso8601String()});
+          if (mounted) _loadData();
         }, child: const Text('Tạo')),
       ],
     )));
   }
-
-  void _showLeadDialog(dynamic task) {
-    final c = TextEditingController(text: task['leadAssignee']?['email'] ?? '');
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Chỉ định phụ trách chính'),
-      content: TextField(controller: c, decoration: const InputDecoration(labelText: 'Email phụ trách chính', border: OutlineInputBorder())),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-        ElevatedButton(onPressed: () async {
-          if (c.text.trim().isEmpty) return; Navigator.pop(ctx);
-          final r = await ApiService.setTaskLead(task['_id'], c.text.trim());
-          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); if (r['success'] == true) _loadData(); }
-        }, child: const Text('Xác nhận')),
-      ],
-    ));
+  void _showFilterSheet() {
+    showModalBottomSheet(context: context, builder: (ctx) => Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('Lọc công việc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<String>(value: _filterStatus, decoration: const InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder()), items: ['All', 'Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s == 'All' ? 'Tất cả trạng thái' : _statusVi(s)))).toList(), onChanged: (v) { setState(() => _filterStatus = v ?? 'All'); _loadData(); Navigator.pop(ctx); }),
+      const SizedBox(height: 10),
+      DropdownButtonFormField<String>(value: _filterPriority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p == 'All' ? 'Tất cả ưu tiên' : p))).toList(), onChanged: (v) { setState(() => _filterPriority = v ?? 'All'); _loadData(); Navigator.pop(ctx); }),
+    ])));
   }
 
-  void _showShareDialog(dynamic task) {
-    final c = TextEditingController(); String p = 'view';
-    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
-      title: const Text('Chia sẻ công việc theo email'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: c, decoration: const InputDecoration(labelText: 'Email người nhận', border: OutlineInputBorder())),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: p, items: const [DropdownMenuItem(value: 'view', child: Text('View')), DropdownMenuItem(value: 'edit', child: Text('Edit'))], onChanged: (v) => setS(() => p = v ?? 'view')),
-      ]),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-        ElevatedButton(onPressed: () async {
-          if (c.text.trim().isEmpty) return; Navigator.pop(ctx);
-          final r = await ApiService.shareTask(task['_id'], c.text.trim(), p);
-          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); if (r['success'] == true) _loadData(); }
-        }, child: const Text('Chia sẻ')),
-      ],
-    )));
+  void _showSortSheet() {
+    showModalBottomSheet(context: context, builder: (ctx) => Column(mainAxisSize: MainAxisSize.min, children: [
+      const ListTile(title: Text('Sắp xếp theo', style: TextStyle(fontWeight: FontWeight.bold))),
+      ListTile(title: const Text('Mới nhất'), selected: _sortBy == 'createdAt', onTap: () { setState(() => _sortBy = 'createdAt'); _loadData(); Navigator.pop(ctx); }),
+      ListTile(title: const Text('Hạn chót gần nhất'), selected: _sortBy == 'dueDate', onTap: () { setState(() => _sortBy = 'dueDate'); _loadData(); Navigator.pop(ctx); }),
+      ListTile(title: const Text('Mức độ ưu tiên'), selected: _sortBy == 'priority', onTap: () { setState(() => _sortBy = 'priority'); _loadData(); Navigator.pop(ctx); }),
+    ]));
   }
 
-  void _showAssignWithConfirmDialog(dynamic task) {
+  void _showSimpleEmailDialog(String title, String btnText, bool hasPerm, Future<dynamic> Function(String, String) onSubmit) {
     final c = TextEditingController(); String p = 'edit';
     showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
-      title: const Text('Giao việc cho nhiều người'),
+      title: Text(title),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: c, decoration: const InputDecoration(labelText: 'Email (cách nhau dấu phẩy)', border: OutlineInputBorder())),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: p, items: const [DropdownMenuItem(value: 'edit', child: Text('Edit')), DropdownMenuItem(value: 'view', child: Text('View'))], onChanged: (v) => setS(() => p = v ?? 'edit')),
+        TextField(controller: c, decoration: const InputDecoration(labelText: 'Nhập email', border: OutlineInputBorder())),
+        if (hasPerm) ...[const SizedBox(height: 10), DropdownButtonFormField<String>(value: p, items: const [DropdownMenuItem(value: 'edit', child: Text('Chỉnh sửa (Edit)')), DropdownMenuItem(value: 'view', child: Text('Chỉ xem (View)'))], onChanged: (v) => setS(() => p = v ?? 'edit'))],
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-        ElevatedButton(onPressed: () async {
-          if (c.text.trim().isEmpty) return;
-          final vRes = await ApiService.validateAssignEmails(task['_id'], c.text.trim(), p);
-          if (!mounted || vRes['success'] != true) return;
-          Navigator.pop(ctx);
-          final valid = (vRes['data']['validUsers'] as List?) ?? [];
-          final invalid = (vRes['data']['invalidEmails'] as List?) ?? [];
-          showDialog(context: context, builder: (cCtx) => AlertDialog(
-            title: const Text('Xác nhận giao việc'),
-            content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Hợp lệ (${valid.length}):', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-              ...valid.map((u) => Text('• ${u['fullName']} (${u['email']})')),
-              if (invalid.isNotEmpty) ...[const SizedBox(height: 8), Text('Bỏ qua: ${invalid.join(", ")}', style: const TextStyle(color: Colors.red))],
-            ]),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(cCtx), child: const Text('Quay lại')),
-              if (valid.isNotEmpty) ElevatedButton(onPressed: () async {
-                Navigator.pop(cCtx);
-                final r = await ApiService.assignTaskUsers(task['_id'], valid.map((u) => u['email']).join(','), p);
-                if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
-              }, child: Text('Xác nhận (${valid.length})')),
-            ],
-          ));
-        }, child: const Text('Kiểm tra')),
+        ElevatedButton(onPressed: () async { if (c.text.trim().isEmpty) return; Navigator.pop(ctx); final r = await onSubmit(c.text.trim(), p); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }, child: Text(btnText)),
       ],
     )));
-  }
-  Future<void> _showParticipantsDialog(String taskId, String taskTitle, bool canEdit) async {
-    final res = await ApiService.getTaskParticipants(taskId);
-    if (!mounted || res['success'] != true) return;
-    final data = res['data']; final lead = data['leadAssignee'];
-    final assignees = (data['assignees'] as List?) ?? []; final shared = (data['sharedWith'] as List?) ?? [];
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: Text('Danh sách: $taskTitle'),
-      content: SizedBox(width: 400, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text('★ Phụ trách chính: ${lead != null ? "${lead['fullName']} (${lead['email']})" : "Chưa có"}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        const Divider(),
-        ...assignees.map((a) => ListTile(dense: true, title: Text('Giao việc: ${a['user']?['fullName']} (${a['permission']})'), subtitle: Text(a['user']?['email'] ?? ''), trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () async { Navigator.pop(ctx); await ApiService.removeTaskParticipant(taskId, a['user']['_id']); _loadData(); }) : null)),
-        ...shared.map((s) => ListTile(dense: true, title: Text('Chia sẻ: ${s['user']?['fullName']} (${s['permission']})'), subtitle: Text(s['user']?['email'] ?? ''), trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () async { Navigator.pop(ctx); await ApiService.removeTaskParticipant(taskId, s['user']['_id']); _loadData(); }) : null)),
-      ]))),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
-    ));
-  }
-
-  Future<void> _openNotificationsDialog() async {
-    final res = await ApiService.getNotifications();
-    if (!mounted || res['success'] != true) return;
-    final list = (res['data'] as List?) ?? [];
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Thông báo (${res['unreadCount'] ?? 0} mới)'),
-        TextButton(onPressed: () async { Navigator.pop(ctx); await ApiService.markAllNotificationsRead(); _loadData(); }, child: const Text('Đọc tất cả')),
-      ]),
-      content: SizedBox(width: 400, height: 320, child: list.isEmpty ? const Center(child: Text('Chưa có thông báo')) : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
-        final n = list[i]; final read = n['isRead'] == true;
-        return ListTile(leading: Icon(read ? Icons.notifications_none : Icons.notifications_active, color: read ? Colors.grey : Colors.blue), title: Text(n['title'] ?? '', style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold)), subtitle: Text(n['message'] ?? ''), onTap: () async { Navigator.pop(ctx); await ApiService.markNotificationRead(n['_id']); _loadData(); });
-      })),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
-    ));
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (_project == null) return const Scaffold(body: Center(child: Text('Không tải được dự án')));
+    final items = _filteredTasks;
+    final tabs = ['Tất cả', 'Của tôi', 'Được giao', 'Được chia sẻ'];
     return Scaffold(
-      appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án'), actions: [
-        IconButton(
-          icon: const Icon(Icons.bar_chart),
-          tooltip: 'Thống kê tiến độ dự án',
-          onPressed: () async {
-            final res = await ApiService.getProjectTaskStats(widget.projectId);
+      backgroundColor: const Color(0xFFF6F5F8),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF6F5F8),
+        elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.menu, color: Colors.black87), onPressed: () => Navigator.pop(context)),
+        title: const Text('Công việc của tôi', style: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.w500)),
+        actions: [
+          IconButton(icon: const Icon(Icons.bar_chart, color: Colors.black54), tooltip: 'Thống kê', onPressed: () async {
+            final res = await ApiService.getProjectStats(widget.projectId);
             if (!mounted || res['success'] != true) return;
             final d = res['data'];
-            final int total = d['total'] ?? 0;
-            final byS = d['byStatus'] ?? {};
-            final byP = d['byPriority'] ?? {};
-            final int done = byS['Done'] ?? 0;
-            final double rate = total == 0 ? 0 : done / total;
-            Widget bar(String label, int val, Color color) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('$label: $val / $total'),
-                const SizedBox(height: 2),
-                LinearProgressIndicator(value: total == 0 ? 0 : val / total, color: color, minHeight: 8),
-              ]),
-            );
+            showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text('Thống kê dự án'), content: Text('Tổng việc: ${d['total']}\nChưa làm: ${d['byStatus']['Todo']} | Đang làm: ${d['byStatus']['In-Progress']} | Xong: ${d['byStatus']['Done']}\nQuá hạn: ${d['overdue']}'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))]));
+          }),
+          IconButton(icon: const Icon(Icons.alarm, color: Colors.black54), tooltip: 'Quét nhắc hạn', onPressed: () async { final r = await ApiService.checkDeadlines(); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }),
+          IconButton(icon: Badge(isLabelVisible: _unreadCount > 0, label: Text('$_unreadCount'), child: const Icon(Icons.notifications_none, color: Colors.black54)), onPressed: () async {
+            final res = await ApiService.getNotifications();
+            if (!mounted || res['success'] != true) return;
+            final list = (res['data'] as List?) ?? [];
             showDialog(context: context, builder: (ctx) => AlertDialog(
-              title: const Text('Thống kê công việc dự án'),
-              content: SizedBox(width: 380, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Tổng số việc: $total • Hoàn thành: ${(rate * 100).toStringAsFixed(0)}% • Quá hạn: ${d['overdue'] ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                const Divider(),
-                const Text('Theo trạng thái:', style: TextStyle(fontWeight: FontWeight.bold)),
-                bar('Todo', byS['Todo'] ?? 0, Colors.grey),
-                bar('In-Progress', byS['In-Progress'] ?? 0, Colors.blue),
-                bar('Done', done, Colors.green),
-                const Divider(),
-                const Text('Theo mức độ ưu tiên:', style: TextStyle(fontWeight: FontWeight.bold)),
-                bar('High (Cao)', byP['High'] ?? 0, Colors.red),
-                bar('Medium (Trung bình)', byP['Medium'] ?? 0, Colors.orange),
-                bar('Low (Thấp)', byP['Low'] ?? 0, Colors.teal),
-              ]))),
+              title: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Thông báo (${res['unreadCount'] ?? 0})'), TextButton(onPressed: () async { Navigator.pop(ctx); await ApiService.markAllNotificationsRead(); _loadData(); }, child: const Text('Đọc tất cả'))]),
+              content: SizedBox(width: 380, height: 280, child: list.isEmpty ? const Center(child: Text('Chưa có thông báo')) : ListView.builder(itemCount: list.length, itemBuilder: (_, i) => ListTile(title: Text(list[i]['title'] ?? ''), subtitle: Text(list[i]['message'] ?? '')))),
               actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
             ));
-          },
+          }),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: _showCreateTaskDialog, backgroundColor: const Color(0xFFE8DEF8), child: const Icon(Icons.add, color: Color(0xFF1D192B))),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (_) => _loadData(),
+            decoration: InputDecoration(
+              hintText: 'Tìm kiếm công việc theo tên...',
+              hintStyle: const TextStyle(color: Colors.black45, fontSize: 14),
+              prefixIcon: const Icon(Icons.search, color: Colors.black54),
+              filled: true,
+              fillColor: const Color(0xFFECEAF0),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
+            ),
+          ),
         ),
-        IconButton(icon: const Icon(Icons.alarm), tooltip: 'Quét nhắc hạn', onPressed: () async { final r = await ApiService.checkDeadlines(); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }),
-        IconButton(icon: Badge(isLabelVisible: _unreadCount > 0, label: Text('$_unreadCount'), child: const Icon(Icons.notifications)), onPressed: _openNotificationsDialog),
-      ]),
-      floatingActionButton: FloatingActionButton.extended(onPressed: _showCreateTaskDialog, icon: const Icon(Icons.add_task), label: const Text('Thêm việc')),
-      body: Padding(padding: const EdgeInsets.all(16), child: ListView(children: [
-        TextField(controller: _searchCtrl, decoration: InputDecoration(hintText: 'Tìm kiếm...', prefixIcon: const Icon(Icons.search), border: const OutlineInputBorder()), onChanged: (_) => _loadData()),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: DropdownButtonFormField<String>(value: _filterStatus, decoration: const InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder()), items: ['All', 'Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: (v) { setState(() => _filterStatus = v ?? 'All'); _loadData(); })),
-          const SizedBox(width: 8),
-          Expanded(child: DropdownButtonFormField<String>(value: _filterPriority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(), onChanged: (v) { setState(() => _filterPriority = v ?? 'All'); _loadData(); })),
-          const SizedBox(width: 8),
-          Expanded(child: DropdownButtonFormField<String>(value: _sortBy, decoration: const InputDecoration(labelText: 'Sắp xếp', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'createdAt', child: Text('Mới nhất')), DropdownMenuItem(value: 'dueDate', child: Text('Hạn chót')), DropdownMenuItem(value: 'priority', child: Text('Ưu tiên'))], onChanged: (v) { setState(() => _sortBy = v ?? 'createdAt'); _loadData(); })),
-        ]),
-        const SizedBox(height: 12),
-        ..._tasks.map((t) {
-          final canEdit = t['canEdit'] == true; final assignees = (t['assignees'] as List?) ?? []; final shared = (t['sharedWith'] as List?) ?? []; final lead = t['leadAssignee'];
-          final due = t['dueDate'] != null ? DateTime.tryParse(t['dueDate'].toString()) : null;
-          final isOverdue = t['status'] != 'Done' && due != null && due.isBefore(DateTime.now());
-          final isUpcoming = t['status'] != 'Done' && due != null && !isOverdue && due.difference(DateTime.now()).inHours <= 24;
-          return Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Expanded(child: Row(children: [Flexible(child: Text(t['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))), const SizedBox(width: 8), Chip(label: Text(canEdit ? 'Chỉnh sửa' : 'Chỉ xem', style: const TextStyle(fontSize: 11)))])),
-              DropdownButton<String>(value: t['status'] ?? 'Todo', items: ['Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: canEdit ? (v) async { if (v != null) { await ApiService.updateTaskStatus(t['_id'], v); _loadData(); } } : null),
-            ]),
-            Row(children: [
-              Text('Ưu tiên: ${t['priority']} • Hạn: ${_fmtDate(t['dueDate'])}'),
-              if (isOverdue) const Text(' [Quá hạn]', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              if (isUpcoming) const Text(' [Sắp đến hạn]', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              TextButton.icon(
-                icon: const Icon(Icons.history, size: 16),
-                label: const Text('Lịch sử'),
-                onPressed: () async {
-                  final res = await ApiService.getTaskActivities(t['_id']);
-                  if (!mounted || res['success'] != true) return;
-                  final logs = (res['data'] as List?) ?? [];
-                  showDialog(context: context, builder: (ctx) => AlertDialog(
-                    title: Text('Lịch sử: ${t['title'] ?? ''}'),
-                    content: SizedBox(width: 420, height: 320, child: logs.isEmpty
-                      ? const Center(child: Text('Chưa có lịch sử hoạt động.'))
-                      : ListView.separated(
-                          itemCount: logs.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (_, i) {
-                            final l = logs[i];
-                            final time = DateTime.tryParse(l['createdAt']?.toString() ?? '')?.toLocal();
-                            final timeStr = time == null ? '' : '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} ${time.day}/${time.month}/${time.year}';
-                            return ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.bolt, size: 18, color: Colors.indigo),
-                              title: Text('${l['action']} • ${l['actor']?['fullName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('${l['detail'] ?? ''}\n$timeStr'),
-                            );
-                          },
-                        )),
-                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
-                  ));
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            ...tabs.map((tab) {
+              final selected = _roleTab == tab;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (selected) const Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.check, size: 16, color: Color(0xFF4A4458))),
+                    Text(tab, style: TextStyle(fontSize: 13, color: selected ? const Color(0xFF1D192B) : Colors.black87, fontWeight: selected ? FontWeight.w500 : FontWeight.normal)),
+                  ]),
+                  selected: selected,
+                  showCheckmark: false,
+                  selectedColor: const Color(0xFFE8DEF8),
+                  backgroundColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: selected ? Colors.transparent : Colors.black26)),
+                  onSelected: (_) => setState(() => _roleTab = tab),
+                ),
+              );
+            }),
+            Padding(padding: const EdgeInsets.only(right: 8), child: OutlinedButton.icon(icon: const Icon(Icons.filter_list, size: 16, color: Colors.black87), label: const Text('Lọc', style: TextStyle(fontSize: 13, color: Colors.black87)), style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), side: const BorderSide(color: Colors.black26)), onPressed: _showFilterSheet)),
+            OutlinedButton.icon(icon: const Icon(Icons.sort, size: 16, color: Colors.black87), label: const Text('Sắp xếp', style: TextStyle(fontSize: 13, color: Colors.black87)), style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), side: const BorderSide(color: Colors.black26)), onPressed: _showSortSheet),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        const Divider(height: 1, color: Colors.black12),
+        Expanded(
+          child: items.isEmpty
+            ? const Center(child: Text('Chưa có công việc nào', style: TextStyle(color: Colors.black45)))
+            : ListView.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.black12),
+                itemBuilder: (_, i) {
+                  final t = items[i];
+                  final canEdit = t['canEdit'] == true;
+                  final status = t['status'] ?? 'Todo';
+                  final desc = (t['description'] ?? '').toString().trim();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(t['title'] ?? '', style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Colors.black87)),
+                        if (desc.isNotEmpty) ...[const SizedBox(height: 3), Text(desc, style: const TextStyle(fontSize: 13.5, color: Colors.black54))],
+                        const SizedBox(height: 6),
+                        Row(children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(status), shape: BoxShape.circle)),
+                          const SizedBox(width: 6),
+                          Text(_statusVi(status), style: const TextStyle(fontSize: 12.5, color: Colors.black54)),
+                          if (t['leadAssignee'] != null) Text('  •  Phụ trách: ${t['leadAssignee']['fullName']}', style: const TextStyle(fontSize: 12.5, color: Colors.black45)),
+                        ]),
+                      ])),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, color: Colors.black45, size: 20),
+                        onSelected: (val) async {
+                          if (val == 'status') { final next = status == 'Todo' ? 'In-Progress' : status == 'In-Progress' ? 'Done' : 'Todo'; await ApiService.updateTaskStatus(t['_id'], next); _loadData(); }
+                          else if (val == 'assign') _showSimpleEmailDialog('Giao việc', 'Giao việc', true, (e, p) => ApiService.assignTaskUsers(t['_id'], e, p));
+                          else if (val == 'lead') _showSimpleEmailDialog('Chỉ định phụ trách chính', 'Xác nhận', false, (e, _) => ApiService.setLeadAssignee(t['_id'], e));
+                          else if (val == 'share') _showSimpleEmailDialog('Chia sẻ công việc', 'Chia sẻ', true, (e, p) => ApiService.shareTask(t['_id'], e, p));
+                          else if (val == 'history') {
+                            final res = await ApiService.getTaskActivities(t['_id']);
+                            if (!mounted || res['success'] != true) return;
+                            final logs = (res['data'] as List?) ?? [];
+                            showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Lịch sử: ${t['title']}'), content: SizedBox(width: 380, height: 280, child: ListView.builder(itemCount: logs.length, itemBuilder: (_, idx) => ListTile(dense: true, title: Text('${logs[idx]['action']} • ${logs[idx]['actor']?['fullName'] ?? ''}'), subtitle: Text(logs[idx]['detail'] ?? '')))), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))]));
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          if (canEdit) const PopupMenuItem(value: 'status', child: Text('Đổi trạng thái')),
+                          if (canEdit) const PopupMenuItem(value: 'assign', child: Text('Giao việc')),
+                          if (canEdit) const PopupMenuItem(value: 'lead', child: Text('Chỉ định phụ trách chính')),
+                          if (canEdit) const PopupMenuItem(value: 'share', child: Text('Chia sẻ')),
+                          const PopupMenuItem(value: 'history', child: Text('Lịch sử hoạt động')),
+                        ],
+                      ),
+                    ]),
+                  );
                 },
               ),
-              TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '', canEdit)),
-              if (canEdit) TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
-              if (canEdit) TextButton(onPressed: () => _showShareDialog(t), child: const Text('Chia sẻ')),
-            ]),
-            Text(lead != null ? '★ Phụ trách chính: ${lead['fullName']}' : '★ Chưa có phụ trách chính', style: const TextStyle(fontSize: 13)),
-            Row(children: [
-              Expanded(child: Text('Giao: ${assignees.length} • Chia sẻ: ${shared.length}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey))),
-              if (canEdit) TextButton(onPressed: () => _showAssignWithConfirmDialog(t), child: const Text('+ Giao việc')),
-            ]),
-          ])));
-        }),
-      ])),
+        ),
+      ]),
     );
   }
 }
-
-

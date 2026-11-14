@@ -3,169 +3,150 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'http://localhost:5000/api';
 
-  static Future<dynamic> _authHeaders() async {
+  static Future _headers() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    return {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
+    return {
+      'Content-Type': 'application/json',
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
   }
 
-  static Future<dynamic> register(String fullName, String email, String password) async {
+  static Future register(String fullName, String email, String password) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/register'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'fullName': fullName, 'email': email, 'password': password}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> login(String email, String password) async {
+
+  static Future login(String email, String password) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/login'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'password': password}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getProfile() async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/auth/profile'), headers: headers);
-    return jsonDecode(res.body);
-  }
-  static Future<dynamic> updateProfile(String fullName, String avatarUrl) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.put(Uri.parse('$baseUrl/auth/profile'), headers: headers, body: jsonEncode({'fullName': fullName, 'avatarUrl': avatarUrl}));
-    return jsonDecode(res.body);
-  }
-  static Future<dynamic> changePassword(String oldPassword, String newPassword) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.put(Uri.parse('$baseUrl/auth/change-password'), headers: headers, body: jsonEncode({'oldPassword': oldPassword, 'newPassword': newPassword}));
-    return jsonDecode(res.body);
-  }
-  static Future<dynamic> forgotPassword(String email) async {
+
+  static Future forgotPassword(String email) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/forgot-password'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> resetPassword(String email, String otp, String newPassword) async {
+
+  static Future resetPassword(String email, String otp, String newPassword) async {
     final res = await http.post(Uri.parse('$baseUrl/auth/reset-password'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'otp': otp, 'newPassword': newPassword}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getProjects() async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/projects'), headers: headers);
+
+  static Future getProfile() async {
+    final res = await http.get(Uri.parse('$baseUrl/users/profile'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getProjectById(String id) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/projects/$id'), headers: headers);
+
+  static Future updateProfile(String fullName, [String avatar = '']) async {
+    final res = await http.put(Uri.parse('$baseUrl/users/profile'), headers: await _headers(), body: jsonEncode({'fullName': fullName, 'avatar': avatar}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> createProject(String name, String description) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/projects'), headers: headers, body: jsonEncode({'name': name, 'description': description}));
+
+  static Future changePassword(String currentPassword, String newPassword) async {
+    final res = await http.put(Uri.parse('$baseUrl/users/change-password'), headers: await _headers(), body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> updateProject(String id, String name, String description) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.put(Uri.parse('$baseUrl/projects/$id'), headers: headers, body: jsonEncode({'name': name, 'description': description}));
+
+  static Future getProjects() async {
+    final res = await http.get(Uri.parse('$baseUrl/projects'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> deleteProject(String id) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.delete(Uri.parse('$baseUrl/projects/$id'), headers: headers);
+
+  static Future getProjectById(String id) async {
+    final res = await http.get(Uri.parse('$baseUrl/projects/$id'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> addMember(String projectId, String email) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/projects/$projectId/members'), headers: headers, body: jsonEncode({'email': email}));
+
+  static Future createProject(String name, String description) async {
+    final res = await http.post(Uri.parse('$baseUrl/projects'), headers: await _headers(), body: jsonEncode({'name': name, 'description': description}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> removeMember(String projectId, String memberId) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.delete(Uri.parse('$baseUrl/projects/$projectId/members/$memberId'), headers: headers);
+
+  static Future deleteProject(String id) async {
+    final res = await http.delete(Uri.parse('$baseUrl/projects/$id'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getTasks(String projectId, {String search = '', String status = 'All', String priority = 'All', String sortBy = 'createdAt'}) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final uri = Uri.parse('$baseUrl/tasks/project/$projectId').replace(queryParameters: {
-      if (search.isNotEmpty) 'search': search,
-      if (status != 'All') 'status': status,
-      if (priority != 'All') 'priority': priority,
-      'sortBy': sortBy,
-    });
-    final res = await http.get(uri, headers: headers);
+
+  static Future getTasks(String projectId, {String search = '', String status = 'All', String priority = 'All', String sortBy = 'createdAt'}) async {
+    final uri = Uri.parse('$baseUrl/tasks/project/$projectId').replace(queryParameters: {'search': search, 'status': status, 'priority': priority, 'sortBy': sortBy});
+    final res = await http.get(uri, headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> createTask(Map<String, dynamic> data) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/tasks'), headers: headers, body: jsonEncode(data));
+
+  static Future createTask(Map data) async {
+    final res = await http.post(Uri.parse('$baseUrl/tasks'), headers: await _headers(), body: jsonEncode(data));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> updateTaskStatus(String taskId, String status) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/status'), headers: headers, body: jsonEncode({'status': status}));
+
+  static Future updateTaskStatus(String taskId, String status) async {
+    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/status'), headers: await _headers(), body: jsonEncode({'status': status}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> updateTaskPriority(String taskId, String priority) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/priority'), headers: headers, body: jsonEncode({'priority': priority}));
+
+  static Future updateTaskPriority(String taskId, String priority) async {
+    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/priority'), headers: await _headers(), body: jsonEncode({'priority': priority}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> updateTaskDates(String taskId, String? startDate, String? dueDate) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/dates'), headers: headers, body: jsonEncode({'startDate': startDate, 'dueDate': dueDate}));
+
+  static Future validateAssignEmails(String taskId, String emails, String permission) async {
+    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/validate-assign'), headers: await _headers(), body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> assignTaskUsers(String taskId, String emails, String permission) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
+
+  static Future assignTaskUsers(String taskId, String emails, String permission) async {
+    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign'), headers: await _headers(), body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> setTaskLead(String taskId, String email) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/lead'), headers: headers, body: jsonEncode({'email': email}));
+
+  static Future setLeadAssignee(String taskId, String email) async {
+    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/lead'), headers: await _headers(), body: jsonEncode({'email': email}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> shareTask(String taskId, String emails, String permission) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/share'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
+
+  static Future shareTask(String taskId, String emails, String permission) async {
+    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/share'), headers: await _headers(), body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getTaskParticipants(String taskId) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/participants'), headers: headers);
+
+  static Future getTaskParticipants(String taskId) async {
+    final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/participants'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> removeTaskParticipant(String taskId, String userId) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.delete(Uri.parse('$baseUrl/tasks/$taskId/participants/$userId'), headers: headers);
+
+  static Future removeTaskParticipant(String taskId, String userId) async {
+    final res = await http.delete(Uri.parse('$baseUrl/tasks/$taskId/participants/$userId'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> validateAssignEmails(String taskId, String emails, String permission) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign/validate'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
+
+  static Future getNotifications() async {
+    final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getNotifications() async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: headers);
+
+  static Future markNotificationRead(String id) async {
+    final res = await http.patch(Uri.parse('$baseUrl/notifications/$id/read'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> markNotificationRead(String id) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/notifications/$id/read'), headers: headers);
+
+  static Future markAllNotificationsRead() async {
+    final res = await http.patch(Uri.parse('$baseUrl/notifications/read-all'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> markAllNotificationsRead() async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.patch(Uri.parse('$baseUrl/notifications/read-all'), headers: headers);
+
+  static Future checkDeadlines() async {
+    final res = await http.post(Uri.parse('$baseUrl/notifications/check-deadlines'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> checkDeadlines() async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.post(Uri.parse('$baseUrl/notifications/check-deadlines'), headers: headers);
+
+  static Future getProjectStats(String projectId) async {
+    final res = await http.get(Uri.parse('$baseUrl/tasks/project/$projectId/stats'), headers: await _headers());
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getProjectTaskStats(String projectId) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/tasks/project/$projectId/stats'), headers: headers);
-    return jsonDecode(res.body);
-  }
-  static Future<dynamic> getTaskActivities(String taskId) async {
-    final headers = Map<String, String>.from(await _authHeaders());
-    final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/activities'), headers: headers);
+
+  static Future getTaskActivities(String taskId) async {
+    final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/activities'), headers: await _headers());
     return jsonDecode(res.body);
   }
 }
