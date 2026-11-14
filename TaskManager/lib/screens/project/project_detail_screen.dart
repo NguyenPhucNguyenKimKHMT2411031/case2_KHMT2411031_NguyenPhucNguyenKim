@@ -173,6 +173,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         title: Text(_project['name'] ?? 'Chi tiết dự án'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.alarm),
+            tooltip: 'Quét nhắc hạn công việc',
+            onPressed: () async {
+              final r = await ApiService.checkDeadlines();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? '')));
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications),
             tooltip: 'Thông báo trong ứng dụng',
             onPressed: () async {
@@ -226,7 +235,18 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               DropdownButton<String>(value: t['status'] ?? 'Todo', items: ['Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(), onChanged: canEdit ? (v) async { if (v != null) { await ApiService.updateTaskStatus(t['_id'], v); _loadData(); } } : null),
             ]),
             Row(children: [
-              Text('Ưu tiên: ${t['priority']} • Hạn: ${_fmtDate(t['dueDate'])}'),
+              Builder(builder: (_) {
+                final due = t['dueDate'] != null ? DateTime.tryParse(t['dueDate'].toString()) : null;
+                final done = t['status'] == 'Done';
+                final now = DateTime.now();
+                final isOverdue = !done && due != null && due.isBefore(now);
+                final isUpcoming = !done && due != null && !isOverdue && due.difference(now).inHours <= 24;
+                return Row(children: [
+                  Text('Ưu tiên:  • Hạn: '),
+                  if (isOverdue) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)), child: const Text('Quá hạn', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)))],
+                  if (isUpcoming) ...[const SizedBox(width: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)), child: const Text('Sắp đến hạn', style: TextStyle(color: Colors.deepOrange, fontSize: 11, fontWeight: FontWeight.bold)))],
+                ]);
+              }),
               const Spacer(),
               TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '', canEdit)),
               if (canEdit) TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
@@ -243,4 +263,5 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 }
+
 
