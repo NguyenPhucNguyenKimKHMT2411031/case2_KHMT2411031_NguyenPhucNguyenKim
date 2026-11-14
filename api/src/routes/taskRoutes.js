@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 router.post('/', taskController.createTask);
 router.get('/project/:projectId', taskController.getTasksByProject);
+router.get('/:id/participants', taskController.getTaskParticipants);
 router.patch('/:id/status', taskController.updateTaskStatus);
 router.patch('/:id/priority', taskController.updateTaskPriority);
 router.patch('/:id/dates', taskController.updateTaskDates);
