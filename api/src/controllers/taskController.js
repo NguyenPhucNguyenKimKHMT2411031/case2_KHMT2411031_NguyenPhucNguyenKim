@@ -143,21 +143,45 @@ exports.setLeadAssignee = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
+// D2 - Chia sẻ công việc theo email & gửi email thông báo
 exports.shareTaskByEmail = async (req, res) => {
   try {
     const { emails, permission } = req.body;
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findById(req.params.id).populate('project', 'name');
     if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
     if (!(await canEditTask(task, req.user.id))) return res.status(403).json({ success: false, message: 'Bạn không có quyền chia sẻ' });
+
+    const sharer = await User.findById(req.user.id);
     const emailList = Array.isArray(emails) ? emails : String(emails || '').split(',');
-    let sharedCount = 0;
+    const newlyShared = [];
+
     for (const raw of emailList) {
       const user = await User.findOne({ email: raw.trim().toLowerCase() });
-      if (user && !task.sharedWith.some(s => s.user.toString() === user._id.toString())) { task.sharedWith.push({ user: user._id, permission: permission || 'view' }); sharedCount++; }
+      if (user && !task.sharedWith.some(s => s.user.toString() === user._id.toString())) {
+        task.sharedWith.push({ user: user._id, permission: permission || 'view' });
+        newlyShared.push(user);
+      }
     }
-    if (sharedCount === 0) return res.status(400).json({ success: false, message: 'Email không tồn tại hoặc đã được chia sẻ' });
+
+    if (newlyShared.length === 0) return res.status(400).json({ success: false, message: 'Email không tồn tại hoặc đã được chia sẻ' });
     await task.save();
-    res.json({ success: true, message: `Đã chia sẻ công việc cho ${sharedCount} người`, data: task });
+
+    const permLabel = (permission || 'view') === 'edit' ? 'Chỉnh sửa (Edit)' : 'Chỉ xem (View)';
+    for (const u of newlyShared) {
+      await sendMailNotification({
+        to: u.email,
+        subject: `[Task Manager] Công việc được chia sẻ với bạn: ${task.title}`,
+        html: `<h3>Xin chào ${u.fullName},</h3>
+               <p><b>${sharer?.fullName || 'Thành viên'}</b> đã chia sẻ công việc <b>"${task.title}"</b> (Dự án: <b>${task.project?.name || ''}</b>) với bạn.</p>
+               <ul>
+                 <li>Quyền truy cập: <b>${permLabel}</b></li>
+                 <li>Trạng thái hiện tại: <b>${task.status}</b></li>
+                 <li>Hạn hoàn thành: <b>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('vi-VN') : 'Chưa đặt'}</b></li>
+               </ul>`
+      });
+    }
+
+    res.json({ success: true, message: `Đã chia sẻ công việc & gửi email thông báo cho ${newlyShared.length} người`, data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
@@ -203,3 +227,4 @@ exports.validateAssignEmails = async (req, res) => {
     res.json({ success: true, data: { validUsers, invalidEmails, permission: permission || 'edit' } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
