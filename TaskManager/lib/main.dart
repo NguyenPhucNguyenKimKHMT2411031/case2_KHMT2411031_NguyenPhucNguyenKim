@@ -1,39 +1,20 @@
-import 'package:flutter/material.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/task_list_screen.dart';
-import 'services/api_service.dart';
+﻿import 'package:flutter/material.dart';
+import 'screens/auth/register_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(const TaskManagerApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TaskManagerApp extends StatelessWidget {
+  const TaskManagerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TaskManager',
+      title: 'Task Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: FutureBuilder<String?>(
-        future: ApiService.getToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
-            return const TaskListScreen();
-          }
-          return const LoginScreen();
-        },
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
+      home: const RegisterScreen(),
     );
   }
 }
