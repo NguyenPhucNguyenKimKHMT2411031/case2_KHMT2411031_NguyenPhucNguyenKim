@@ -128,4 +128,9 @@ class ApiService {
     final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/participants'), headers: headers);
     return jsonDecode(res.body);
   }
+  static Future<dynamic> removeTaskParticipant(String taskId, String userId) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.delete(Uri.parse('$baseUrl/tasks/$taskId/participants/$userId'), headers: headers);
+    return jsonDecode(res.body);
+  }
 }

@@ -95,7 +95,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     )));
   }
 
-  Future<void> _showParticipantsDialog(String taskId, String taskTitle) async {
+  Future<void> _showParticipantsDialog(String taskId, String taskTitle, bool canEdit) async {
     final res = await ApiService.getTaskParticipants(taskId);
     if (!mounted || res['success'] != true) return;
     final data = res['data'];
@@ -104,17 +104,43 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     final shared = (data['sharedWith'] as List?) ?? [];
     showDialog(context: context, builder: (ctx) => AlertDialog(
       title: Text('Danh sách tham gia: $taskTitle'),
-      content: SizedBox(width: 400, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         const Text('★ Phụ trách chính:', style: TextStyle(fontWeight: FontWeight.bold)),
-        ListTile(dense: true, title: Text(lead != null ? '${lead['fullName']} (${lead['email']})' : 'Chưa chỉ định')),
+        ListTile(
+          dense: true,
+          title: Text(lead != null ? '${lead['fullName']} (${lead['email']})' : 'Chưa chỉ định'),
+          trailing: (canEdit && lead != null) ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi quyền & gỡ', onPressed: () async {
+            Navigator.pop(ctx);
+            final r = await ApiService.removeTaskParticipant(taskId, lead['_id']);
+            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
+          }) : null,
+        ),
         const Divider(),
         Text('Người được giao việc (${assignees.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
         if (assignees.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa giao cho ai'))
-        else ...assignees.map((a) => ListTile(dense: true, leading: const Icon(Icons.person), title: Text(a['user']?['fullName'] ?? ''), subtitle: Text(a['user']?['email'] ?? ''), trailing: Chip(label: Text(a['permission'] ?? 'edit')))),
+        else ...assignees.map((a) => ListTile(
+          dense: true, leading: const Icon(Icons.person),
+          title: Text('${a['user']?['fullName'] ?? ''} (${a['permission']})'),
+          subtitle: Text(a['user']?['email'] ?? ''),
+          trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi quyền & gỡ', onPressed: () async {
+            Navigator.pop(ctx);
+            final r = await ApiService.removeTaskParticipant(taskId, a['user']['_id']);
+            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
+          }) : null,
+        )),
         const Divider(),
         Text('Người được chia sẻ (${shared.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
         if (shared.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa chia sẻ cho ai'))
-        else ...shared.map((s) => ListTile(dense: true, leading: const Icon(Icons.share), title: Text(s['user']?['fullName'] ?? ''), subtitle: Text(s['user']?['email'] ?? ''), trailing: Chip(label: Text(s['permission'] ?? 'view')))),
+        else ...shared.map((s) => ListTile(
+          dense: true, leading: const Icon(Icons.share),
+          title: Text('${s['user']?['fullName'] ?? ''} (${s['permission']})'),
+          subtitle: Text(s['user']?['email'] ?? ''),
+          trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi chia sẻ', onPressed: () async {
+            Navigator.pop(ctx);
+            final r = await ApiService.removeTaskParticipant(taskId, s['user']['_id']);
+            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
+          }) : null,
+        )),
       ]))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
     ));
@@ -152,7 +178,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             Row(children: [
               Text('Ưu tiên: ${t['priority']} • Hạn: ${_fmtDate(t['dueDate'])}'),
               const Spacer(),
-              TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '')),
+              TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '', canEdit)),
               if (canEdit) TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
               if (canEdit) TextButton(onPressed: () => _showShareDialog(t), child: const Text('Chia sẻ')),
             ]),
