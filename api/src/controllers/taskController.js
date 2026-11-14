@@ -165,3 +165,38 @@ exports.removeTaskParticipant = async (req, res) => {
     res.json({ success: true, message: 'Đã thu hồi quyền và gỡ người dùng khỏi công việc', data: task });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
+
+// C7 - Kiểm tra danh sách email trước khi xác nhận giao việc cho nhiều người
+exports.validateAssignEmails = async (req, res) => {
+  try {
+    const { emails, permission } = req.body;
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+    if (!(await canEditTask(task, req.user.id))) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền giao việc' });
+    }
+    const emailList = Array.isArray(emails) ? emails : String(emails || '').split(',');
+    const validUsers = [];
+    const invalidEmails = [];
+    const seen = new Set();
+
+    for (const raw of emailList) {
+      const clean = raw.trim().toLowerCase();
+      if (!clean || seen.has(clean)) continue;
+      seen.add(clean);
+      const user = await User.findOne({ email: clean });
+      if (!user) {
+        invalidEmails.push(`${clean} (chưa đăng ký)`);
+      } else if (task.assignees.some(a => a.user.toString() === user._id.toString())) {
+        invalidEmails.push(`${clean} (đã được giao)`);
+      } else {
+        validUsers.push({ _id: user._id, fullName: user.fullName, email: user.email, permission: permission || 'edit' });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { validUsers, invalidEmails, permission: permission || 'edit' }
+    });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};

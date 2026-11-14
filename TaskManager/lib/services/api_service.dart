@@ -133,4 +133,9 @@ class ApiService {
     final res = await http.delete(Uri.parse('$baseUrl/tasks/$taskId/participants/$userId'), headers: headers);
     return jsonDecode(res.body);
   }
+  static Future<dynamic> validateAssignEmails(String taskId, String emails, String permission) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign/validate'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
+    return jsonDecode(res.body);
+  }
 }

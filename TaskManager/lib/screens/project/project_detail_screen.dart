@@ -95,6 +95,51 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     )));
   }
 
+  void _showAssignWithConfirmDialog(dynamic task) {
+    final c = TextEditingController(); String p = 'edit';
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
+      title: const Text('Giao việc cho nhiều người'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: c, decoration: const InputDecoration(labelText: 'Nhập danh sách Email (cách nhau dấu phẩy)', hintText: 'a@gmail.com, b@gmail.com', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(value: p, decoration: const InputDecoration(labelText: 'Quyền thực hiện', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'edit', child: Text('Chỉnh sửa (Edit)')), DropdownMenuItem(value: 'view', child: Text('Chỉ xem (View)'))], onChanged: (v) => setS(() => p = v ?? 'edit')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+        ElevatedButton(onPressed: () async {
+          if (c.text.trim().isEmpty) return;
+          final vRes = await ApiService.validateAssignEmails(task['_id'], c.text.trim(), p);
+          if (!mounted || vRes['success'] != true) return;
+          Navigator.pop(ctx);
+          final valid = (vRes['data']['validUsers'] as List?) ?? [];
+          final invalid = (vRes['data']['invalidEmails'] as List?) ?? [];
+          showDialog(context: context, builder: (cCtx) => AlertDialog(
+            title: const Text('Kiểm tra & Xác nhận giao việc'),
+            content: SizedBox(width: 400, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Hợp lệ (${valid.length} người - Quyền: $p):', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+              if (valid.isEmpty) const Text('Không có email hợp lệ nào.')
+              else ...valid.map((u) => Text('• ${u['fullName']} (${u['email']})')),
+              if (invalid.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text('Bỏ qua (${invalid.length}):', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                ...invalid.map((e) => Text('• $e', style: const TextStyle(color: Colors.red))),
+              ],
+            ])),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(cCtx), child: const Text('Quay lại')),
+              if (valid.isNotEmpty) ElevatedButton(onPressed: () async {
+                Navigator.pop(cCtx);
+                final validEmails = valid.map((u) => u['email']).join(',');
+                final r = await ApiService.assignTaskUsers(task['_id'], validEmails, p);
+                if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
+              }, child: Text('Xác nhận giao (${valid.length})')),
+            ],
+          ));
+        }, child: const Text('Kiểm tra')),
+      ],
+    )));
+  }
+
   Future<void> _showParticipantsDialog(String taskId, String taskTitle, bool canEdit) async {
     final res = await ApiService.getTaskParticipants(taskId);
     if (!mounted || res['success'] != true) return;
@@ -106,41 +151,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       title: Text('Danh sách tham gia: $taskTitle'),
       content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         const Text('★ Phụ trách chính:', style: TextStyle(fontWeight: FontWeight.bold)),
-        ListTile(
-          dense: true,
-          title: Text(lead != null ? '${lead['fullName']} (${lead['email']})' : 'Chưa chỉ định'),
-          trailing: (canEdit && lead != null) ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi quyền & gỡ', onPressed: () async {
-            Navigator.pop(ctx);
-            final r = await ApiService.removeTaskParticipant(taskId, lead['_id']);
-            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
-          }) : null,
-        ),
+        ListTile(dense: true, title: Text(lead != null ? '${lead['fullName']} (${lead['email']})' : 'Chưa chỉ định'), trailing: (canEdit && lead != null) ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () async { Navigator.pop(ctx); final r = await ApiService.removeTaskParticipant(taskId, lead['_id']); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }) : null),
         const Divider(),
         Text('Người được giao việc (${assignees.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
         if (assignees.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa giao cho ai'))
-        else ...assignees.map((a) => ListTile(
-          dense: true, leading: const Icon(Icons.person),
-          title: Text('${a['user']?['fullName'] ?? ''} (${a['permission']})'),
-          subtitle: Text(a['user']?['email'] ?? ''),
-          trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi quyền & gỡ', onPressed: () async {
-            Navigator.pop(ctx);
-            final r = await ApiService.removeTaskParticipant(taskId, a['user']['_id']);
-            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
-          }) : null,
-        )),
+        else ...assignees.map((a) => ListTile(dense: true, leading: const Icon(Icons.person), title: Text('${a['user']?['fullName'] ?? ''} (${a['permission']})'), subtitle: Text(a['user']?['email'] ?? ''), trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () async { Navigator.pop(ctx); final r = await ApiService.removeTaskParticipant(taskId, a['user']['_id']); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }) : null)),
         const Divider(),
         Text('Người được chia sẻ (${shared.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
         if (shared.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Chưa chia sẻ cho ai'))
-        else ...shared.map((s) => ListTile(
-          dense: true, leading: const Icon(Icons.share),
-          title: Text('${s['user']?['fullName'] ?? ''} (${s['permission']})'),
-          subtitle: Text(s['user']?['email'] ?? ''),
-          trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), tooltip: 'Thu hồi chia sẻ', onPressed: () async {
-            Navigator.pop(ctx);
-            final r = await ApiService.removeTaskParticipant(taskId, s['user']['_id']);
-            if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); }
-          }) : null,
-        )),
+        else ...shared.map((s) => ListTile(dense: true, leading: const Icon(Icons.share), title: Text('${s['user']?['fullName'] ?? ''} (${s['permission']})'), subtitle: Text(s['user']?['email'] ?? ''), trailing: canEdit ? IconButton(icon: const Icon(Icons.person_remove, color: Colors.red), onPressed: () async { Navigator.pop(ctx); final r = await ApiService.removeTaskParticipant(taskId, s['user']['_id']); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }) : null)),
       ]))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
     ));
@@ -185,18 +204,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             Text(lead != null ? '★ Phụ trách chính: ${lead['fullName']} (${lead['email']})' : '★ Chưa có phụ trách chính', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             Row(children: [
               Expanded(child: Text('Đã giao: ${assignees.isEmpty ? "Chưa có" : assignees.map((a) => "${a['user']?['fullName'] ?? ''} (${a['permission']})").join(", ")} | Chia sẻ: ${shared.isEmpty ? "Chưa có" : shared.map((s) => "${s['user']?['fullName'] ?? ''} (${s['permission']})").join(", ")}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey))),
-              if (canEdit) TextButton(onPressed: () {
-                final c = TextEditingController(); String p = 'edit';
-                showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
-                  title: const Text('Giao việc & Phân quyền'),
-                  content: Column(mainAxisSize: MainAxisSize.min, children: [
-                    TextField(controller: c, decoration: const InputDecoration(labelText: 'Email (cách nhau dấu phẩy)', border: OutlineInputBorder())),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(value: p, items: const [DropdownMenuItem(value: 'edit', child: Text('Edit')), DropdownMenuItem(value: 'view', child: Text('View'))], onChanged: (v) => setS(() => p = v ?? 'edit')),
-                  ]),
-                  actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')), ElevatedButton(onPressed: () async { Navigator.pop(ctx); final r = await ApiService.assignTaskUsers(t['_id'], c.text.trim(), p); if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); _loadData(); } }, child: const Text('Giao'))],
-                )));
-              }, child: const Text('+ Giao việc')),
+              if (canEdit) TextButton(onPressed: () => _showAssignWithConfirmDialog(t), child: const Text('+ Giao việc')),
             ]),
           ])));
         }),
