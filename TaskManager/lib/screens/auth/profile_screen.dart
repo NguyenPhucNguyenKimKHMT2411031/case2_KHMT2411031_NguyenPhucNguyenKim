@@ -12,6 +12,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameCtrl = TextEditingController();
   final _avatarCtrl = TextEditingController();
+  final _oldPassCtrl = TextEditingController();
+  final _newPassCtrl = TextEditingController();
   String _email = '';
   bool _loading = true;
   bool _saving = false;
@@ -54,6 +56,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _handleChangePassword() async {
+    final res = await ApiService.changePassword(_oldPassCtrl.text, _newPassCtrl.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
+    if (res['success'] == true) {
+      _oldPassCtrl.clear();
+      _newPassCtrl.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,11 +89,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Họ và tên', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
                   TextField(controller: _avatarCtrl, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Link ảnh đại diện (Avatar URL)', border: OutlineInputBorder())),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _saving ? null : _saveProfile,
                     style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                    child: _saving ? const CircularProgressIndicator() : const Text('Lưu thay đổi'),
+                    child: _saving ? const CircularProgressIndicator() : const Text('Lưu thông tin cá nhân'),
+                  ),
+                  const Divider(height: 40),
+                  const Text('Đổi mật khẩu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(controller: _oldPassCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại', border: OutlineInputBorder())),
+                  const SizedBox(height: 12),
+                  TextField(controller: _newPassCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu mới', border: OutlineInputBorder())),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    onPressed: _handleChangePassword,
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    child: const Text('Cập nhật mật khẩu'),
                   ),
                 ],
               ),
