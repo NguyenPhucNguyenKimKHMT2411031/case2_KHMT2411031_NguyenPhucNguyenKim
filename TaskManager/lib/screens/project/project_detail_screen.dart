@@ -169,7 +169,38 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_project == null) return const Scaffold(body: Center(child: Text('Không tải được dự án')));
     return Scaffold(
-      appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án')),
+      appBar: AppBar(
+        title: Text(_project['name'] ?? 'Chi tiết dự án'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            tooltip: 'Thông báo trong ứng dụng',
+            onPressed: () async {
+              final res = await ApiService.getNotifications();
+              if (!mounted || res['success'] != true) return;
+              final list = (res['data'] as List?) ?? [];
+              showDialog(context: context, builder: (ctx) => AlertDialog(
+                title: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Thông báo ( mới)'),
+                  TextButton(onPressed: () async { Navigator.pop(ctx); await ApiService.markAllNotificationsRead(); }, child: const Text('Đọc tất cả')),
+                ]),
+                content: SizedBox(width: 420, height: 340, child: list.isEmpty
+                  ? const Center(child: Text('Chưa có thông báo nào.'))
+                  : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
+                      final n = list[i]; final read = n['isRead'] == true;
+                      return ListTile(
+                        leading: Icon(read ? Icons.notifications_none : Icons.notifications_active, color: read ? Colors.grey : Colors.blue),
+                        title: Text(n['title'] ?? '', style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold)),
+                        subtitle: Text(n['message'] ?? ''),
+                        onTap: () async { Navigator.pop(ctx); await ApiService.markNotificationRead(n['_id']); },
+                      );
+                    })),
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
+              ));
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(onPressed: _showCreateTaskDialog, icon: const Icon(Icons.add_task), label: const Text('Thêm việc')),
       body: Padding(padding: const EdgeInsets.all(16), child: ListView(children: [
         TextField(controller: _searchCtrl, decoration: InputDecoration(hintText: 'Tìm kiếm công việc...', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(icon: const Icon(Icons.clear), onPressed: () { _searchCtrl.clear(); _loadData(); }), border: const OutlineInputBorder()), onChanged: (_) => _loadData()),
@@ -212,3 +243,4 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 }
+

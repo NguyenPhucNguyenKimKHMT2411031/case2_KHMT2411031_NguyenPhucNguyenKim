@@ -138,4 +138,19 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign/validate'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
+  static Future<dynamic> getNotifications() async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.get(Uri.parse('$baseUrl/notifications'), headers: headers);
+    return jsonDecode(res.body);
+  }
+  static Future<dynamic> markNotificationRead(String id) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.patch(Uri.parse('$baseUrl/notifications/$id/read'), headers: headers);
+    return jsonDecode(res.body);
+  }
+  static Future<dynamic> markAllNotificationsRead() async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.patch(Uri.parse('$baseUrl/notifications/read-all'), headers: headers);
+    return jsonDecode(res.body);
+  }
 }
