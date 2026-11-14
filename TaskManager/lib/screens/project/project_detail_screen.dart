@@ -15,6 +15,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final _searchCtrl = TextEditingController();
   String _filterStatus = 'All';
   String _filterPriority = 'All';
+  String _sortBy = 'createdAt';
 
   @override
   void initState() { super.initState(); _loadData(); }
@@ -26,6 +27,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       search: _searchCtrl.text.trim(),
       status: _filterStatus,
       priority: _filterPriority,
+      sortBy: _sortBy,
     );
     if (!mounted) return;
     setState(() {
@@ -153,16 +155,27 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         Row(children: [
           Expanded(child: DropdownButtonFormField<String>(
             value: _filterStatus,
-            decoration: const InputDecoration(labelText: 'Lọc trạng thái', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-            items: ['All', 'Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s == 'All' ? 'Tất cả trạng thái' : s))).toList(),
+            decoration: const InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+            items: ['All', 'Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s == 'All' ? 'Tất cả' : s))).toList(),
             onChanged: (val) { setState(() => _filterStatus = val ?? 'All'); _loadData(); },
           )),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(child: DropdownButtonFormField<String>(
             value: _filterPriority,
-            decoration: const InputDecoration(labelText: 'Lọc ưu tiên', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-            items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p == 'All' ? 'Tất cả ưu tiên' : p))).toList(),
+            decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+            items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p == 'All' ? 'Tất cả' : p))).toList(),
             onChanged: (val) { setState(() => _filterPriority = val ?? 'All'); _loadData(); },
+          )),
+          const SizedBox(width: 8),
+          Expanded(child: DropdownButtonFormField<String>(
+            value: _sortBy,
+            decoration: const InputDecoration(labelText: 'Sắp xếp', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+            items: const [
+              DropdownMenuItem(value: 'createdAt', child: Text('Mới nhất')),
+              DropdownMenuItem(value: 'dueDate', child: Text('Hạn chót')),
+              DropdownMenuItem(value: 'priority', child: Text('Độ ưu tiên')),
+            ],
+            onChanged: (val) { setState(() => _sortBy = val ?? 'createdAt'); _loadData(); },
           )),
         ]),
         const SizedBox(height: 14),
