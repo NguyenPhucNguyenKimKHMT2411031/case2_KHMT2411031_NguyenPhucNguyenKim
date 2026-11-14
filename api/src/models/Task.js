@@ -9,6 +9,7 @@ const taskSchema = new mongoose.Schema({
   dueDate: { type: Date, default: null },
   leadAssignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   assignees: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, permission: { type: String, enum: ['view', 'edit'], default: 'edit' } }],
+  sharedWith: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, permission: { type: String, enum: ['view', 'edit'], default: 'view' } }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 module.exports = mongoose.model('Task', taskSchema);

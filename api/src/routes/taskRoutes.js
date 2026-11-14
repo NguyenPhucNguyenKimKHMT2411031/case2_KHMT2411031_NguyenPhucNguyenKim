@@ -10,4 +10,5 @@ router.patch('/:id/priority', taskController.updateTaskPriority);
 router.patch('/:id/dates', taskController.updateTaskDates);
 router.post('/:id/assign', taskController.assignUsersByEmail);
 router.patch('/:id/lead', taskController.setLeadAssignee);
+router.post('/:id/share', taskController.shareTaskByEmail);
 module.exports = router;

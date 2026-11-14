@@ -69,12 +69,30 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ElevatedButton(onPressed: () async {
           if (c.text.trim().isEmpty) return; Navigator.pop(ctx);
           final r = await ApiService.setTaskLead(task['_id'], c.text.trim());
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? '')));
-          if (r['success'] == true) _loadData();
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); if (r['success'] == true) _loadData(); }
         }, child: const Text('Xác nhận')),
       ],
     ));
+  }
+
+  void _showShareDialog(dynamic task) {
+    final c = TextEditingController(); String p = 'view';
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
+      title: const Text('Chia sẻ công việc theo email'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: c, decoration: const InputDecoration(labelText: 'Email người nhận (cách nhau dấu phẩy)', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(value: p, decoration: const InputDecoration(labelText: 'Quyền chia sẻ', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: 'view', child: Text('Chỉ xem (View)')), DropdownMenuItem(value: 'edit', child: Text('Chỉnh sửa (Edit)'))], onChanged: (v) => setS(() => p = v ?? 'view')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+        ElevatedButton(onPressed: () async {
+          if (c.text.trim().isEmpty) return; Navigator.pop(ctx);
+          final r = await ApiService.shareTask(task['_id'], c.text.trim(), p);
+          if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r['message'] ?? ''))); if (r['success'] == true) _loadData(); }
+        }, child: const Text('Chia sẻ')),
+      ],
+    )));
   }
   @override
   Widget build(BuildContext context) {
@@ -95,7 +113,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ]),
         const SizedBox(height: 12),
         ..._tasks.map((t) {
-          final assignees = (t['assignees'] as List?) ?? []; final lead = t['leadAssignee'];
+          final assignees = (t['assignees'] as List?) ?? []; final shared = (t['sharedWith'] as List?) ?? []; final lead = t['leadAssignee'];
           return Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Expanded(child: Text(t['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
@@ -105,10 +123,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               Text('Ưu tiên: ${t['priority']} • Hạn: ${_fmtDate(t['dueDate'])}'),
               const Spacer(),
               TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
+              TextButton(onPressed: () => _showShareDialog(t), child: const Text('Chia sẻ')),
             ]),
             Text(lead != null ? '★ Phụ trách chính: ${lead['fullName']} (${lead['email']})' : '★ Chưa có phụ trách chính', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             Row(children: [
-              Expanded(child: Text(assignees.isEmpty ? 'Chưa giao cho ai' : 'Đã giao: ${assignees.map((a) => "${a['user']?['fullName'] ?? ''} (${a['permission']})").join(", ")}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey))),
+              Expanded(child: Text('Đã giao: ${assignees.isEmpty ? "Chưa có" : assignees.map((a) => "${a['user']?['fullName'] ?? ''} (${a['permission']})").join(", ")} | Chia sẻ: ${shared.isEmpty ? "Chưa có" : shared.map((s) => "${s['user']?['fullName'] ?? ''} (${s['permission']})").join(", ")}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey))),
               TextButton(onPressed: () {
                 final c = TextEditingController(); String p = 'edit';
                 showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => AlertDialog(
