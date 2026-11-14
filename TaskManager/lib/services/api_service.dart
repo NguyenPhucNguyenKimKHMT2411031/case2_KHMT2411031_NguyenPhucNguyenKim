@@ -77,12 +77,13 @@ class ApiService {
     final res = await http.delete(Uri.parse('$baseUrl/projects/$projectId/members/$memberId'), headers: headers);
     return jsonDecode(res.body);
   }
-  static Future<dynamic> getTasks(String projectId, {String search = '', String status = 'All', String priority = 'All'}) async {
+  static Future<dynamic> getTasks(String projectId, {String search = '', String status = 'All', String priority = 'All', String sortBy = 'createdAt'}) async {
     final headers = Map<String, String>.from(await _authHeaders());
     final uri = Uri.parse('$baseUrl/tasks/project/$projectId').replace(queryParameters: {
       if (search.isNotEmpty) 'search': search,
       if (status != 'All') 'status': status,
       if (priority != 'All') 'priority': priority,
+      'sortBy': sortBy,
     });
     final res = await http.get(uri, headers: headers);
     return jsonDecode(res.body);

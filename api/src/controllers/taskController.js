@@ -17,21 +17,28 @@ exports.createTask = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
 
-// B6 - Lấy danh sách công việc kèm Tìm kiếm theo tên & Lọc theo trạng thái, ưu tiên
+// B6 & B7 - Lấy danh sách công việc kèm Tìm kiếm, Lọc & Sắp xếp
 exports.getTasksByProject = async (req, res) => {
   try {
-    const { search, status, priority } = req.query;
+    const { search, status, priority, sortBy } = req.query;
     const filter = { project: req.params.projectId };
-    if (search && search.trim() !== '') {
-      filter.title = { $regex: search.trim(),$options: 'i' };
+    if (search && search.trim() !== '') filter.title = { $regex: search.trim(), $options: 'i' };
+    if (status && status !== 'All') filter.status = status;
+    if (priority && priority !== 'All') filter.priority = priority;
+
+    let tasks = await Task.find(filter).sort({ createdAt: -1 });
+
+    if (sortBy === 'dueDate') {
+      tasks.sort((a, b) => {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+    } else if (sortBy === 'priority') {
+      const rank = { High: 1, Medium: 2, Low: 3 };
+      tasks.sort((a, b) => (rank[a.priority] || 4) - (rank[b.priority] || 4));
     }
-    if (status && status !== 'All') {
-      filter.status = status;
-    }
-    if (priority && priority !== 'All') {
-      filter.priority = priority;
-    }
-    const tasks = await Task.find(filter).sort({ createdAt: -1 });
+
     res.json({ success: true, data: tasks });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };
