@@ -248,6 +248,36 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               if (isOverdue) const Text(' [Quá hạn]', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
               if (isUpcoming) const Text(' [Sắp đến hạn]', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
               const Spacer(),
+              TextButton.icon(
+                icon: const Icon(Icons.history, size: 16),
+                label: const Text('Lịch sử'),
+                onPressed: () async {
+                  final res = await ApiService.getTaskActivities(t['_id']);
+                  if (!mounted || res['success'] != true) return;
+                  final logs = (res['data'] as List?) ?? [];
+                  showDialog(context: context, builder: (ctx) => AlertDialog(
+                    title: Text('Lịch sử: ${t['title'] ?? ''}'),
+                    content: SizedBox(width: 420, height: 320, child: logs.isEmpty
+                      ? const Center(child: Text('Chưa có lịch sử hoạt động.'))
+                      : ListView.separated(
+                          itemCount: logs.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final l = logs[i];
+                            final time = DateTime.tryParse(l['createdAt']?.toString() ?? '')?.toLocal();
+                            final timeStr = time == null ? '' : '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} ${time.day}/${time.month}/${time.year}';
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.bolt, size: 18, color: Colors.indigo),
+                              title: Text('${l['action']} • ${l['actor']?['fullName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('${l['detail'] ?? ''}\n$timeStr'),
+                            );
+                          },
+                        )),
+                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))],
+                  ));
+                },
+              ),
               TextButton.icon(icon: const Icon(Icons.group, size: 16), label: Text('Danh sách (${assignees.length + shared.length})'), onPressed: () => _showParticipantsDialog(t['_id'], t['title'] ?? '', canEdit)),
               if (canEdit) TextButton(onPressed: () => _showLeadDialog(t), child: const Text('Phụ trách chính')),
               if (canEdit) TextButton(onPressed: () => _showShareDialog(t), child: const Text('Chia sẻ')),
@@ -263,4 +293,5 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     );
   }
 }
+
 

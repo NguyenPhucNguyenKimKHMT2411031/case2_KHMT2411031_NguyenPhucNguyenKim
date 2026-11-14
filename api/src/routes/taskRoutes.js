@@ -6,6 +6,7 @@ router.use(authMiddleware);
 router.post('/', taskController.createTask);
 router.get('/project/:projectId', taskController.getTasksByProject);
 router.get('/project/:projectId/stats', taskController.getProjectTaskStats);
+router.get('/:id/activities', taskController.getTaskActivities);
 router.get('/:id/participants', taskController.getTaskParticipants);
 router.delete('/:id/participants/:userId', taskController.removeTaskParticipant);
 router.patch('/:id/status', taskController.updateTaskStatus);
