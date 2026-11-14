@@ -1,4 +1,5 @@
 ﻿const Project = require('../models/Project');
+const User = require('../models/User');
 
 exports.createProject = async (req, res) => {
   try {
@@ -45,5 +46,33 @@ exports.deleteProject = async (req, res) => {
     if (project.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Chỉ chủ dự án mới có quyền xóa' });
     await Project.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Đã xóa dự án' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+exports.addMember = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Không tìm thấy dự án' });
+    if (project.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Chỉ chủ dự án mới có quyền mời thành viên' });
+    const userToAdd = await User.findOne({ email: (email || '').toLowerCase().trim() });
+    if (!userToAdd) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này' });
+    if (project.members.some(m => m.toString() === userToAdd._id.toString())) return res.status(400).json({ success: false, message: 'Người dùng này đã ở trong dự án' });
+    project.members.push(userToAdd._id);
+    await project.save();
+    res.json({ success: true, message: `Đã thêm ${userToAdd.fullName} vào dự án` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+};
+
+exports.removeMember = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, message: 'Không tìm thấy dự án' });
+    if (project.owner.toString() !== req.user.id) return res.status(403).json({ success: false, message: 'Chỉ chủ dự án mới có quyền xóa thành viên' });
+    if (memberId === project.owner.toString()) return res.status(400).json({ success: false, message: 'Không thể xóa chủ dự án' });
+    project.members = project.members.filter(m => m.toString() !== memberId);
+    await project.save();
+    res.json({ success: true, message: 'Đã xóa thành viên khỏi dự án' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };

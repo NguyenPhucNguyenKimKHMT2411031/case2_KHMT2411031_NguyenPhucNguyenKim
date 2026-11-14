@@ -65,10 +65,38 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     if (res['success'] == true) Navigator.pop(context, true);
   }
 
+  void _showInviteDialog() {
+    final emailCtrl = TextEditingController();
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Mời thành viên'),
+      content: TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Nhập Email thành viên', border: OutlineInputBorder())),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+        ElevatedButton(onPressed: () async {
+          if (emailCtrl.text.trim().isEmpty) return;
+          Navigator.pop(ctx);
+          final res = await ApiService.addMember(widget.projectId, emailCtrl.text.trim());
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
+          if (res['success'] == true) _loadProject();
+        }, child: const Text('Mời')),
+      ],
+    ));
+  }
+
+  Future<void> _removeMember(String memberId) async {
+    final res = await ApiService.removeMember(widget.projectId, memberId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
+    if (res['success'] == true) _loadProject();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_project == null) return const Scaffold(body: Center(child: Text('Không tải được dự án')));
+    final members = (_project['members'] as List?) ?? [];
+    final ownerId = _project['owner']?['_id'];
     return Scaffold(
       appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án'), actions: [
         if (_isOwner) ...[
@@ -76,11 +104,27 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           IconButton(icon: const Icon(Icons.delete, color: Colors.red), tooltip: 'Xóa dự án', onPressed: _deleteProject),
         ]
       ]),
-      body: Padding(padding: const EdgeInsets.all(16), child: Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Mô tả dự án', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 6),
-        Text((_project['description'] ?? '').isNotEmpty ? _project['description'] : 'Chưa có mô tả'),
-      ])))),
+      body: Padding(padding: const EdgeInsets.all(16), child: ListView(children: [
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Mô tả dự án', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 6),
+          Text((_project['description'] ?? '').isNotEmpty ? _project['description'] : 'Chưa có mô tả'),
+        ]))),
+        const SizedBox(height: 16),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Thành viên (${members.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          if (_isOwner) ElevatedButton.icon(onPressed: _showInviteDialog, icon: const Icon(Icons.person_add), label: const Text('Mời')),
+        ]),
+        const SizedBox(height: 8),
+        ...members.map((m) {
+          final isProjectOwner = m['_id'] == ownerId;
+          return Card(child: ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.person)),
+            title: Text(m['fullName'] ?? ''), subtitle: Text(m['email'] ?? ''),
+            trailing: isProjectOwner ? const Chip(label: Text('Chủ dự án')) : (_isOwner ? IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.red), onPressed: () => _removeMember(m['_id'])) : null),
+          ));
+        }),
+      ])),
     );
   }
 }
