@@ -32,4 +32,20 @@ class ApiService {
     final res = await http.put(Uri.parse('$baseUrl/auth/profile'), headers: headers, body: jsonEncode({'fullName': fullName, 'avatarUrl': avatarUrl}));
     return jsonDecode(res.body);
   }
+
+  static Future<dynamic> changePassword(String oldPassword, String newPassword) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.put(Uri.parse('$baseUrl/auth/change-password'), headers: headers, body: jsonEncode({'oldPassword': oldPassword, 'newPassword': newPassword}));
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> forgotPassword(String email) async {
+    final res = await http.post(Uri.parse('$baseUrl/auth/forgot-password'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email}));
+    return jsonDecode(res.body);
+  }
+
+  static Future<dynamic> resetPassword(String email, String otp, String newPassword) async {
+    final res = await http.post(Uri.parse('$baseUrl/auth/reset-password'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'email': email, 'otp': otp, 'newPassword': newPassword}));
+    return jsonDecode(res.body);
+  }
 }

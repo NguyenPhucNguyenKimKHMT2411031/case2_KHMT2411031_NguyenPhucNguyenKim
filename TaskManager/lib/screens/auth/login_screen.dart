@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../home_screen.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,21 +19,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     setState(() => _loading = true);
-    final res = await ApiService.login(_emailCtrl.text.trim(), _passCtrl.text);
-    setState(() => _loading = false);
-
-    if (!mounted) return;
-    if (res['success'] == true) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', res['token']);
-      await prefs.setString('user_id', res['user']['id']);
-      await prefs.setString('user_name', res['user']['fullName']);
-      await prefs.setString('user_email', res['user']['email']);
-
+    try {
+      final res = await ApiService.login(_emailCtrl.text.trim(), _passCtrl.text).timeout(const Duration(seconds: 10));
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Lỗi đăng nhập')));
+      if (res['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', res['token']);
+        await prefs.setString('user_id', res['user']['id']);
+        await prefs.setString('user_name', res['user']['fullName']);
+        await prefs.setString('user_email', res['user']['email']);
+
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Lỗi đăng nhập')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi kết nối Server: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -49,7 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
             const SizedBox(height: 12),
             TextField(controller: _passCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu', border: OutlineInputBorder())),
-            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                child: const Text('Quên mật khẩu?'),
+              ),
+            ),
+            const SizedBox(height: 8),
             ElevatedButton(
               onPressed: _loading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
