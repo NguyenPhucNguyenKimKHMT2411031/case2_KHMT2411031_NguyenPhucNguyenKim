@@ -11,119 +11,79 @@ class ProjectDetailScreen extends StatefulWidget {
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   dynamic _project;
+  List<dynamic> _tasks = [];
   String _currentUserId = '';
   bool _loading = true;
 
   @override
-  void initState() { super.initState(); _loadProject(); }
+  void initState() { super.initState(); _loadData(); }
 
-  Future<void> _loadProject() async {
+  Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
     _currentUserId = prefs.getString('user_id') ?? '';
-    final res = await ApiService.getProjectById(widget.projectId);
+    final projRes = await ApiService.getProjectById(widget.projectId);
+    final taskRes = await ApiService.getTasks(widget.projectId);
     if (!mounted) return;
-    setState(() { _loading = false; if (res['success'] == true) _project = res['data']; });
+    setState(() {
+      _loading = false;
+      if (projRes['success'] == true) _project = projRes['data'];
+      if (taskRes['success'] == true) _tasks = taskRes['data'] ?? [];
+    });
   }
 
   bool get _isOwner => _project != null && _project['owner']?['_id'] == _currentUserId;
 
-  void _showEditDialog() {
-    final nameCtrl = TextEditingController(text: _project['name']);
-    final descCtrl = TextEditingController(text: _project['description']);
+  void _showCreateTaskDialog() {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
     showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Chỉnh sửa dự án'),
+      title: const Text('Thêm công việc mới'),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Tên dự án', border: OutlineInputBorder())),
+        TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Tên công việc *', border: OutlineInputBorder())),
         const SizedBox(height: 12),
         TextField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder())),
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         ElevatedButton(onPressed: () async {
+          if (titleCtrl.text.trim().isEmpty) return;
           Navigator.pop(ctx);
-          final res = await ApiService.updateProject(widget.projectId, nameCtrl.text.trim(), descCtrl.text.trim());
+          final res = await ApiService.createTask({'projectId': widget.projectId, 'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim()});
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
-          if (res['success'] == true) _loadProject();
-        }, child: const Text('Lưu')),
+          if (res['success'] == true) _loadData();
+        }, child: const Text('Tạo')),
       ],
     ));
   }
 
-  Future<void> _deleteProject() async {
-    final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Xác nhận xóa'), content: const Text('Bạn có chắc chắn muốn xóa dự án này không?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-        ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), onPressed: () => Navigator.pop(ctx, true), child: const Text('Xóa')),
-      ],
-    ));
-    if (confirm != true) return;
-    final res = await ApiService.deleteProject(widget.projectId);
+  Future<void> _changeStatus(String taskId, String newStatus) async {
+    final res = await ApiService.updateTaskStatus(taskId, newStatus);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
-    if (res['success'] == true) Navigator.pop(context, true);
-  }
-
-  void _showInviteDialog() {
-    final emailCtrl = TextEditingController();
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Mời thành viên'),
-      content: TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Nhập Email thành viên', border: OutlineInputBorder())),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-        ElevatedButton(onPressed: () async {
-          if (emailCtrl.text.trim().isEmpty) return;
-          Navigator.pop(ctx);
-          final res = await ApiService.addMember(widget.projectId, emailCtrl.text.trim());
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
-          if (res['success'] == true) _loadProject();
-        }, child: const Text('Mời')),
-      ],
-    ));
-  }
-
-  Future<void> _removeMember(String memberId) async {
-    final res = await ApiService.removeMember(widget.projectId, memberId);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? '')));
-    if (res['success'] == true) _loadProject();
+    if (res['success'] == true) _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_project == null) return const Scaffold(body: Center(child: Text('Không tải được dự án')));
-    final members = (_project['members'] as List?) ?? [];
-    final ownerId = _project['owner']?['_id'];
     return Scaffold(
-      appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án'), actions: [
-        if (_isOwner) ...[
-          IconButton(icon: const Icon(Icons.edit), tooltip: 'Sửa dự án', onPressed: _showEditDialog),
-          IconButton(icon: const Icon(Icons.delete, color: Colors.red), tooltip: 'Xóa dự án', onPressed: _deleteProject),
-        ]
-      ]),
+      appBar: AppBar(title: Text(_project['name'] ?? 'Chi tiết dự án')),
+      floatingActionButton: FloatingActionButton.extended(onPressed: _showCreateTaskDialog, icon: const Icon(Icons.add_task), label: const Text('Thêm việc')),
       body: Padding(padding: const EdgeInsets.all(16), child: ListView(children: [
-        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Mô tả dự án', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 6),
-          Text((_project['description'] ?? '').isNotEmpty ? _project['description'] : 'Chưa có mô tả'),
-        ]))),
-        const SizedBox(height: 16),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Thành viên (${members.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          if (_isOwner) ElevatedButton.icon(onPressed: _showInviteDialog, icon: const Icon(Icons.person_add), label: const Text('Mời')),
-        ]),
+        Text('Danh sách công việc (${_tasks.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...members.map((m) {
-          final isProjectOwner = m['_id'] == ownerId;
-          return Card(child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: Text(m['fullName'] ?? ''), subtitle: Text(m['email'] ?? ''),
-            trailing: isProjectOwner ? const Chip(label: Text('Chủ dự án')) : (_isOwner ? IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.red), onPressed: () => _removeMember(m['_id'])) : null),
-          ));
-        }),
+        if (_tasks.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('Chưa có công việc nào. Bấm "+ Thêm việc" để tạo!')))
+        else ..._tasks.map((t) => Card(child: ListTile(
+          title: Text(t['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(t['description'] ?? ''),
+          trailing: DropdownButton<String>(
+            value: t['status'] ?? 'Todo',
+            items: ['Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+            onChanged: (val) { if (val != null) _changeStatus(t['_id'], val); },
+          ),
+        ))),
       ])),
     );
   }
