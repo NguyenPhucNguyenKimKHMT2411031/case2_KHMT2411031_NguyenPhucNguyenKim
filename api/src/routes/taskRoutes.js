@@ -2,7 +2,6 @@
 const router = express.Router();
 const taskController = require('../controllers/taskController');
 const authMiddleware = require('../middleware/authMiddleware');
-
 router.use(authMiddleware);
 router.post('/', taskController.createTask);
 router.get('/project/:projectId', taskController.getTasksByProject);
@@ -10,5 +9,5 @@ router.patch('/:id/status', taskController.updateTaskStatus);
 router.patch('/:id/priority', taskController.updateTaskPriority);
 router.patch('/:id/dates', taskController.updateTaskDates);
 router.post('/:id/assign', taskController.assignUsersByEmail);
-
+router.patch('/:id/lead', taskController.setLeadAssignee);
 module.exports = router;

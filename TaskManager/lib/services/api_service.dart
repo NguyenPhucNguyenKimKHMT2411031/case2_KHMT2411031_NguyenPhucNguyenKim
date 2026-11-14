@@ -113,4 +113,9 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/tasks/$taskId/assign'), headers: headers, body: jsonEncode({'emails': emails, 'permission': permission}));
     return jsonDecode(res.body);
   }
+  static Future<dynamic> setTaskLead(String taskId, String email) async {
+    final headers = Map<String, String>.from(await _authHeaders());
+    final res = await http.patch(Uri.parse('$baseUrl/tasks/$taskId/lead'), headers: headers, body: jsonEncode({'email': email}));
+    return jsonDecode(res.body);
+  }
 }
