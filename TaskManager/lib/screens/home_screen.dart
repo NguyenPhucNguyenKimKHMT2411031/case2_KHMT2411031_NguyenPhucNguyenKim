@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/login_screen.dart';
+import 'auth/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Task Manager'),
         actions: [
+          IconButton(icon: const Icon(Icons.person), tooltip: 'Hồ sơ cá nhân', onPressed: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())); _loadUser(); }),
           IconButton(icon: const Icon(Icons.logout), tooltip: 'Đăng xuất', onPressed: _logout),
         ],
       ),
@@ -52,9 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(_email, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-              label: const Text('Đăng xuất'),
+              onPressed: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())); _loadUser(); },
+              icon: const Icon(Icons.edit),
+              label: const Text('Xem & cập nhật hồ sơ'),
             ),
           ],
         ),
