@@ -149,4 +149,9 @@ class ApiService {
     final res = await http.get(Uri.parse('$baseUrl/tasks/$taskId/activities'), headers: await _headers());
     return jsonDecode(res.body);
   }
+
+  static Future deleteTask(String taskId) async {
+    final res = await http.delete(Uri.parse('$baseUrl/tasks/$taskId'), headers: await _headers());
+    return jsonDecode(res.body);
+  }
 }

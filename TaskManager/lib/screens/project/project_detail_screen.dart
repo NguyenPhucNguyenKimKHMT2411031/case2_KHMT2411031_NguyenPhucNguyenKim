@@ -223,6 +223,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             final logs = (res['data'] as List?) ?? [];
                             showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Lịch sử: ${t['title']}'), content: SizedBox(width: 380, height: 280, child: ListView.builder(itemCount: logs.length, itemBuilder: (_, idx) => ListTile(dense: true, title: Text('${logs[idx]['action']} • ${logs[idx]['actor']?['fullName'] ?? ''}'), subtitle: Text(logs[idx]['detail'] ?? '')))), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Đóng'))]));
                           }
+                          else if (val == 'delete') _confirmDeleteTask(t);
                         },
                         itemBuilder: (_) => [
                           if (canEdit) const PopupMenuItem(value: 'status', child: Text('Đổi trạng thái')),
@@ -230,6 +231,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           if (canEdit) const PopupMenuItem(value: 'lead', child: Text('Chỉ định phụ trách chính')),
                           if (canEdit) const PopupMenuItem(value: 'share', child: Text('Chia sẻ')),
                           const PopupMenuItem(value: 'history', child: Text('Lịch sử hoạt động')),
+                            const PopupMenuItem(value: 'delete', child: Text('Xóa công việc', style: TextStyle(color: Colors.red))),
                         ],
                       ),
                     ]),
@@ -240,4 +242,30 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       ]),
     );
   }
+
+  void _confirmDeleteTask(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa công việc'),
+        content: Text('Bạn có chắc chắn muốn xóa "${task['title']}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final res = await ApiService.deleteTask(task['_id']);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Đã xóa công việc')));
+                _loadData();
+              }
+            },
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
