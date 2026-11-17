@@ -10,15 +10,17 @@ async function logActivity(taskId, actorId, action, detail) {
   catch (e) { console.error('[LogActivity Error]:', e.message); }
 }
 
+const getId = (ref) => (!ref ? '' : (ref._id ? ref._id.toString() : ref.toString()));
+
 async function canEditTask(task, userId) {
   if (!task || !userId) return false;
   const uid = userId.toString();
-  if (task.createdBy && task.createdBy.toString() === uid) return true;
-  if (task.leadAssignee && task.leadAssignee.toString() === uid) return true;
-  const proj = await Project.findById(task.project);
-  if (proj && proj.owner && proj.owner.toString() === uid) return true;
-  if (task.assignees.some(a => a.user.toString() === uid && a.permission === 'edit')) return true;
-  if (task.sharedWith.some(s => s.user.toString() === uid && s.permission === 'edit')) return true;
+  if (getId(task.createdBy) === uid) return true;
+  if (getId(task.leadAssignee) === uid) return true;
+  const proj = await Project.findById(getId(task.project));
+  if (proj && getId(proj.owner) === uid) return true;
+  if ((task.assignees || []).some(a => getId(a.user) === uid && a.permission === 'edit')) return true;
+  if ((task.sharedWith || []).some(s => getId(s.user) === uid && s.permission === 'edit')) return true;
   return false;
 }
 
