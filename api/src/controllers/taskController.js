@@ -1,4 +1,4 @@
-﻿const Task = require('../models/Task');
+const Task = require('../models/Task');
 const User = require('../models/User');
 const Project = require('../models/Project');
 const Notification = require('../models/Notification');
@@ -35,7 +35,17 @@ exports.createTask = async (req, res) => {
 exports.getTasksByProject = async (req, res) => {
   try {
     const { search, status, priority, sortBy } = req.query;
+    const proj = await Project.findById(req.params.projectId);
+    const isProjMember = proj && (proj.owner.toString() === req.user.id || proj.members.some(m => m.toString() === req.user.id));
     const filter = { project: req.params.projectId };
+    if (!isProjMember) {
+      filter.$or = [
+        { 'sharedWith.user': req.user.id },
+        { 'assignees.user': req.user.id },
+        { leadAssignee: req.user.id },
+        { createdBy: req.user.id }
+      ];
+    }
     if (search && search.trim() !== '') filter.title = { $regex: search.trim(),$options: 'i' };
     if (status && status !== 'All') filter.status = status;
     if (priority && priority !== 'All') filter.priority = priority;

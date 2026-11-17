@@ -1,4 +1,5 @@
-﻿const Project = require('../models/Project');
+const Task = require('../models/Task');
+const Project = require('../models/Project');
 const User = require('../models/User');
 
 exports.createProject = async (req, res) => {
@@ -12,8 +13,24 @@ exports.createProject = async (req, res) => {
 
 exports.getProjects = async (req, res) => {
   try {
-    const projects = await Project.find({ $or: [{ owner: req.user.id }, { members: req.user.id }] })
-      .populate('owner', 'fullName email avatarUrl').populate('members', 'fullName email avatarUrl').sort({ createdAt: -1 });
+    const relatedTasks = await Task.find({
+      $or: [
+        { 'sharedWith.user': req.user.id },
+        { 'assignees.user': req.user.id },
+        { leadAssignee: req.user.id }
+      ]
+    }).distinct('project');
+
+    const projects = await Project.find({
+      $or: [
+        { owner: req.user.id },
+        { members: req.user.id },
+        { _id: { $in: relatedTasks } }
+      ]
+    })
+      .populate('owner', 'fullName email avatarUrl')
+      .populate('members', 'fullName email avatarUrl')
+      .sort({ createdAt: -1 });
     res.json({ success: true, data: projects });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 };

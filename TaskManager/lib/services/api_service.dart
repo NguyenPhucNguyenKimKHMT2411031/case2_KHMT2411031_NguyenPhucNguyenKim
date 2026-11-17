@@ -1,9 +1,10 @@
-﻿import 'dart:convert';
+﻿import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static String get baseUrl => kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api';
 
   static Future _headers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,17 +36,17 @@ class ApiService {
   }
 
   static Future getProfile() async {
-    final res = await http.get(Uri.parse('$baseUrl/users/profile'), headers: await _headers());
+    final res = await http.get(Uri.parse('$baseUrl/auth/profile'), headers: await _headers());
     return jsonDecode(res.body);
   }
 
   static Future updateProfile(String fullName, [String avatar = '']) async {
-    final res = await http.put(Uri.parse('$baseUrl/users/profile'), headers: await _headers(), body: jsonEncode({'fullName': fullName, 'avatar': avatar}));
+    final res = await http.put(Uri.parse('$baseUrl/auth/profile'), headers: await _headers(), body: jsonEncode({'fullName': fullName, 'avatarUrl': avatar}));
     return jsonDecode(res.body);
   }
 
   static Future changePassword(String currentPassword, String newPassword) async {
-    final res = await http.put(Uri.parse('$baseUrl/users/change-password'), headers: await _headers(), body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}));
+    final res = await http.put(Uri.parse('$baseUrl/auth/change-password'), headers: await _headers(), body: jsonEncode({'oldPassword': currentPassword, 'newPassword': newPassword}));
     return jsonDecode(res.body);
   }
 
@@ -164,3 +165,5 @@ class ApiService {
     return jsonDecode(res.body);
   }
 }
+
+

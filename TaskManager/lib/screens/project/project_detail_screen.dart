@@ -203,11 +203,23 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         Text(t['title'] ?? '', style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Colors.black87)),
                         if (desc.isNotEmpty) ...[const SizedBox(height: 3), Text(desc, style: const TextStyle(fontSize: 13.5, color: Colors.black54))],
                         const SizedBox(height: 6),
-                        Row(children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(status), shape: BoxShape.circle)),
-                          const SizedBox(width: 6),
-                          Text(_statusVi(status), style: const TextStyle(fontSize: 12.5, color: Colors.black54)),
-                          if (t['leadAssignee'] != null) Text('  •  Phụ trách: ${t['leadAssignee']['fullName']}', style: const TextStyle(fontSize: 12.5, color: Colors.black45)),
+                        Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(status), shape: BoxShape.circle)),
+                            const SizedBox(width: 5),
+                            Text(_statusVi(status), style: const TextStyle(fontSize: 12.5, color: Colors.black54)),
+                          ]),
+                          Text(
+                            '• Ưu tiên: ${t['priority'] == 'Low' ? 'Thấp' : t['priority'] == 'High' ? 'Cao' : 'Trung bình'}',
+                            style: TextStyle(fontSize: 12.5, color: t['priority'] == 'High' ? Colors.red : t['priority'] == 'Low' ? Colors.green : Colors.orange),
+                          ),
+                          if (t['dueDate'] != null) Builder(builder: (_) {
+                            final d = DateTime.tryParse(t['dueDate'].toString())?.toLocal();
+                            if (d == null) return const SizedBox.shrink();
+                            return Text('• Hạn: ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}', style: const TextStyle(fontSize: 12.5, color: Colors.black54));
+                          }),
+                          if (t['createdBy'] != null) Text('• Tạo bởi: ${t['createdBy'] is Map ? (t['createdBy']['fullName'] ?? t['createdBy']['email'] ?? '') : t['createdBy']}', style: const TextStyle(fontSize: 12.5, color: Colors.black45)),
+                          if (t['leadAssignee'] != null) Text('• Phụ trách: ${t['leadAssignee'] is Map ? (t['leadAssignee']['fullName'] ?? '') : t['leadAssignee']}', style: const TextStyle(fontSize: 12.5, color: Colors.black45)),
                         ]),
                       ])),
                       PopupMenuButton<String>(
@@ -371,6 +383,7 @@ PopupMenuItem(value: 'status', child: Text('Đổi trạng thái')),
     );
   }
 }
+
 
 
 
