@@ -59,7 +59,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         const SizedBox(height: 10),
         TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder())),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: priority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['Low', 'Medium', 'High'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setS(() => priority = v ?? 'Medium')),
+        DropdownButtonFormField<String>(value: priority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['Low', 'Medium', 'High'].map((e) => DropdownMenuItem(value: e, child: Text(e == 'Low' ? 'Thấp' : e == 'High' ? 'Cao' : 'Trung bình'))).toList(), onChanged: (v) => setS(() => priority = v ?? 'Medium')),
         const SizedBox(height: 10),
         OutlinedButton(onPressed: () async { final p = await showDatePicker(context: ctx, initialDate: DateTime.now(), firstDate: DateTime(2024), lastDate: DateTime(2030)); if (p != null) setS(() => dueDate = p); }, child: Text(dueDate == null ? 'Chọn hạn chót' : 'Hạn: ${_fmtDate(dueDate!.toIso8601String())}')),
       ]),
@@ -79,7 +79,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       const SizedBox(height: 12),
       DropdownButtonFormField<String>(value: _filterStatus, decoration: const InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder()), items: ['All', 'Todo', 'In-Progress', 'Done'].map((s) => DropdownMenuItem(value: s, child: Text(s == 'All' ? 'Tất cả trạng thái' : _statusVi(s)))).toList(), onChanged: (v) { setState(() => _filterStatus = v ?? 'All'); _loadData(); Navigator.pop(ctx); }),
       const SizedBox(height: 10),
-      DropdownButtonFormField<String>(value: _filterPriority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p == 'All' ? 'Tất cả ưu tiên' : p))).toList(), onChanged: (v) { setState(() => _filterPriority = v ?? 'All'); _loadData(); Navigator.pop(ctx); }),
+      DropdownButtonFormField<String>(value: _filterPriority, decoration: const InputDecoration(labelText: 'Ưu tiên', border: OutlineInputBorder()), items: ['All', 'Low', 'Medium', 'High'].map((p) => DropdownMenuItem(value: p, child: Text(p == 'All' ? 'Tất cả ưu tiên' : p == 'Low' ? 'Thấp' : p == 'High' ? 'Cao' : 'Trung bình'))).toList(), onChanged: (v) { setState(() => _filterPriority = v ?? 'All'); _loadData(); Navigator.pop(ctx); }),
     ])));
   }
 
@@ -213,7 +213,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert, color: Colors.black45, size: 20),
                         onSelected: (val) async {
-                          if (val == 'status') { final next = status == 'Todo' ? 'In-Progress' : status == 'In-Progress' ? 'Done' : 'Todo'; await ApiService.updateTaskStatus(t['_id'], next); _loadData(); }
+                          if (val == 'edit') _showEditTaskDialog(t);
+                          else if (val == 'status') { final next = status == 'Todo' ? 'In-Progress' : status == 'In-Progress' ? 'Done' : 'Todo'; await ApiService.updateTaskStatus(t['_id'], next); _loadData(); }
                           else if (val == 'assign') _showSimpleEmailDialog('Giao việc', 'Giao việc', true, (e, p) => ApiService.assignTaskUsers(t['_id'], e, p));
                           else if (val == 'lead') _showSimpleEmailDialog('Chỉ định phụ trách chính', 'Xác nhận', false, (e, _) => ApiService.setLeadAssignee(t['_id'], e));
                           else if (val == 'share') _showSimpleEmailDialog('Chia sẻ công việc', 'Chia sẻ', true, (e, p) => ApiService.shareTask(t['_id'], e, p));
@@ -226,7 +227,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           else if (val == 'delete') _confirmDeleteTask(t);
                         },
                         itemBuilder: (_) => [
-                          if (canEdit) const PopupMenuItem(value: 'status', child: Text('Đổi trạng thái')),
+                          if (canEdit) const PopupMenuItem(value: 'edit', child: Text('Sửa công việc')),
+                          if (canEdit) const
+PopupMenuItem(value: 'status', child: Text('Đổi trạng thái')),
                           if (canEdit) const PopupMenuItem(value: 'assign', child: Text('Giao việc')),
                           if (canEdit) const PopupMenuItem(value: 'lead', child: Text('Chỉ định phụ trách chính')),
                           if (canEdit) const PopupMenuItem(value: 'share', child: Text('Chia sẻ')),
@@ -267,5 +270,109 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       ),
     );
   }
+
+  void _showEditTaskDialog(Map<String, dynamic> task) {
+    final titleCtrl = TextEditingController(text: task['title']?.toString() ?? '');
+    final descCtrl = TextEditingController(text: task['description']?.toString() ?? '');
+    String priority = ['Low', 'Medium', 'High'].contains(task['priority']) ? task['priority'] : 'Medium';
+    DateTime? dueDate = task['dueDate'] != null ? DateTime.tryParse(task['dueDate'].toString())?.toLocal() : null;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Sửa công việc'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Tên công việc *', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'Mô tả chi tiết', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: priority,
+                  decoration: const InputDecoration(labelText: 'Mức độ ưu tiên', border: OutlineInputBorder()),
+                  items: ['Low', 'Medium', 'High']
+                      .map((p) => DropdownMenuItem(value: p, child: Text(p == 'Low' ? 'Thấp' : p == 'High' ? 'Cao' : 'Trung bình')))
+                      .toList(),
+                  onChanged: (v) => setS(() => priority = v ?? 'Medium'),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final pickedDate = await showDatePicker(
+                      context: ctx,
+                      initialDate: dueDate ?? now,
+                      firstDate: DateTime(now.year - 1),
+                      lastDate: DateTime(now.year + 5),
+                    );
+                    if (pickedDate == null || !ctx.mounted) return;
+                    final pickedTime = await showTimePicker(
+                      context: ctx,
+                      initialTime: TimeOfDay.fromDateTime(dueDate ?? now),
+                    );
+                    setS(() {
+                      dueDate = DateTime(
+                        pickedDate.year,
+                        pickedDate.month,
+                        pickedDate.day,
+                        pickedTime?.hour ?? 23,
+                        pickedTime?.minute ?? 59,
+                      );
+                    });
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Thời gian hạn chót',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                    ),
+                    child: Text(
+                      dueDate == null
+                          ? 'Chưa đặt hạn (Bấm để chọn)'
+                          : '${dueDate!.day.toString().padLeft(2, '0')}/${dueDate!.month.toString().padLeft(2, '0')}/${dueDate!.year} ${dueDate!.hour.toString().padLeft(2, '0')}:${dueDate!.minute.toString().padLeft(2, '0')}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+            ElevatedButton(
+              onPressed: () async {
+                if (titleCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx);
+                final res = await ApiService.updateTask(task['_id'], {
+                  'title': titleCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
+                  'priority': priority,
+                  'dueDate': dueDate?.toIso8601String(),
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Đã cập nhật công việc')));
+                  _loadData();
+                }
+              },
+              child: const Text('Lưu thay đổi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
+
+
+
+
 
